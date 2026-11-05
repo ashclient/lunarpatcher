@@ -59,7 +59,7 @@ jobs:
             Write-Host "Existing release $tag; skipping. Bump package.json version for a new release."
             exit 0
           }
-          $notes = "LunarPatcher 1.2: simplified Electron window, full friends-list + Quick Play + shortcuts layout for known Lunar renderer builds, Updates tab for news, and improved Sakura wallpaper visibility. Includes verified backup/restore and GitHub auto-update. Unsigned community build; Windows SmartScreen may warn."
+          $notes = "LunarPatcher 1.2.1: resilient home-tools insertion, simplified Electron window, full friends-list + Quick Play + shortcuts layout for known Lunar renderer builds, Updates tab for news, and improved Sakura wallpaper visibility. Includes verified backup/restore and GitHub auto-update. Unsigned community build; Windows SmartScreen may warn."
           $assets = @(Get-ChildItem -Path dist -File | Where-Object { $_.Name -match '^LunarPatcher_Setup_.*\.exe(\.blockmap)?$' -or $_.Name -eq 'latest.yml' } | ForEach-Object { $_.FullName })
           if (-not ($assets | Where-Object { $_ -like '*.exe' })) { throw 'No setup executable found for release' }
           if (-not ($assets | Where-Object { $_ -like '*latest.yml' })) { throw 'Missing latest.yml for the updater' }
