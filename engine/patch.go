@@ -314,6 +314,18 @@ func makeCSS(mode, color string) string {
 #root .lunar-patcher-updates>h1{font-size:22px;font-weight:700;margin:0;color:inherit}
 #root button:focus-visible{outline:2px solid #e5a3c5;outline-offset:2px}
 @media(max-width:1000px){#root .lunar-patcher-friends{width:310px!important}#root .lunar-patcher-shortcuts{grid-template-columns:repeat(3,minmax(0,1fr))}}
+/* Use a real two-column grid, not a 12-track grid with an oversized friends column. */
+#root .lunar-patcher-home{height:100%;overflow:hidden;padding:15px 17px 17px!important;box-sizing:border-box}
+#root .lunar-patcher-home-content{display:grid!important;grid-template-columns:minmax(0,1fr) minmax(285px,350px)!important;grid-template-rows:minmax(0,1fr)!important;gap:20px!important;width:100% !important;height:100% !important;min-height:0!important;overflow:hidden!important;align-items:stretch!important}
+#root .lunar-patcher-home-content>*:first-child{grid-column:1!important;grid-row:1!important;min-width:0!important;min-height:0!important;max-height:100% !important;width:100% !important;margin-right:0!important;overflow-y:auto!important;overflow-x:hidden!important;padding-right:3px!important;scrollbar-gutter:stable}
+#root .lunar-patcher-home-content>.lunar-patcher-friends{grid-column:2!important;grid-row:1!important;min-width:0!important;min-height:0!important;max-height:100% !important;width:100% !important;height:100% !important;padding:15px!important;overflow-y:auto!important;overscroll-behavior:contain}
+#root .lunar-patcher-home-tools{gap:12px!important;margin:0 0 8px!important;min-width:0!important;flex-shrink:0!important}
+#root .lunar-patcher-hero{flex-shrink:0!important;min-width:0!important}
+#root .lunar-patcher-section{width:100%;box-sizing:border-box!important;flex-shrink:0!important}
+#root .lunar-patcher-shortcuts{gap:10px!important}
+#root .lunar-patcher-shortcut{min-width:0!important;white-space:normal!important}
+@media(max-width:1070px){#root .lunar-patcher-home-content{grid-template-columns:minmax(0,1fr) minmax(260px,315px)!important;gap:13px!important}#root .lunar-patcher-home{padding:10px!important}}
+@media(max-width:820px){#root .lunar-patcher-home-content{grid-template-columns:minmax(0,1fr) 245px!important;gap:10px!important}#root .lunar-patcher-shortcuts{gap:6px!important}#root .lunar-patcher-shortcut{font-size:11px!important;padding:8px 5px!important}}
 @media(prefers-reduced-motion:reduce){#root .lunar-patcher-shortcut{transition:none!important}}
 `
 	if mode == "ads" {
@@ -338,6 +350,22 @@ html.dark,html.dark body{background:#8b4c74!important}
 #root .lunar-patcher-shortcut:hover{background:rgba(248,171,211,.3);border-color:#fbcce3}
 #root .lunar-patcher-updates{background:linear-gradient(145deg,rgba(116,54,94,.85),rgba(75,30,64,.87))!important}
 #root ::-webkit-scrollbar-thumb{background:rgba(255,177,216,.54)!important}
+
+/* Sakura refinement: layered rose panels and accessible contrast. */
+html.dark,html.dark body{background:#261727!important}
+#root{--colors-space-1:#302034!important;--colors-space-2:#3e2942!important;--colors-space-3:#503150!important;--colors-space-4:#67395f!important;--colors-midnight-1:#211521!important;--colors-space-a4:rgba(242,150,192,.19)!important;background:linear-gradient(135deg,rgba(24,15,32,.56),rgba(78,27,60,.42)),var(--lunar-sakura-wallpaper) center/cover no-repeat fixed!important}
+#root .lunar-patcher-home{position:relative!important;isolation:isolate;background:linear-gradient(120deg,rgba(45,24,47,.89),rgba(51,23,48,.79)),var(--lunar-sakura-wallpaper) center/cover no-repeat!important;border:1px solid rgba(255,181,212,.28)!important;box-shadow:inset 0 1px 0 rgba(255,210,231,.12),0 12px 42px rgba(15,5,26,.24)!important}
+#root .lunar-patcher-home-content{position:relative!important;z-index:1!important;background:transparent!important}
+#root .lunar-patcher-hero{position:relative!important;overflow:hidden!important;border:1px solid rgba(255,164,207,.52)!important;isolation:isolate!important;box-shadow:0 8px 26px rgba(15,5,30,.3)!important}
+#root .lunar-patcher-hero::after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(120deg,rgba(129,42,101,.18),rgba(250,139,188,.06)),var(--lunar-sakura-wallpaper) center/cover no-repeat;opacity:.28;mix-blend-mode:screen;z-index:1}
+#root .lunar-patcher-friends,#root .lunar-patcher-section{background:linear-gradient(145deg,rgba(65,34,62,.95),rgba(81,42,75,.93))!important;border-color:rgba(255,174,214,.38)!important;box-shadow:inset 0 1px 0 rgba(255,204,226,.07),0 8px 20px rgba(20,7,21,.14)!important;backdrop-filter:blur(10px)!important}
+#root .lunar-patcher-section>h3{color:#ffe1f0!important;font-weight:700!important}
+#root .lunar-patcher-shortcut{color:#fff0f8!important;background:linear-gradient(155deg,rgba(228,122,180,.25),rgba(146,70,120,.23))!important;border-color:rgba(255,185,219,.35)!important}
+#root .lunar-patcher-shortcut:hover{background:rgba(243,154,199,.39)!important;border-color:#ffd3e8!important}
+#root .lunar-patcher-updates{background:linear-gradient(130deg,rgba(77,35,69,.96),rgba(36,22,43,.98))!important}
+#root .lunar-patcher-updates>h1{color:#ffdbea!important}
+#root ::-webkit-scrollbar-thumb{background:rgba(241,152,198,.51)!important}
+#root button:focus-visible{outline-color:#fbb5d4!important}
 `, artwork)
 	}
 	if mode == "color" {
