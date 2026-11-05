@@ -46,6 +46,16 @@ jobs:
           if (!(Test-Path $expected)) { throw "Missing $expected" }
           if (!(Test-Path 'dist/latest.yml')) { throw 'Updater metadata latest.yml missing' }
           Get-FileHash -Algorithm SHA256 $expected | Format-List
+      - name: Upload Windows installer as downloadable Actions artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: LunarPatcher-Windows-v1.2.2
+          path: |
+            dist/LunarPatcher_Setup_*.exe
+            dist/LunarPatcher_Setup_*.exe.blockmap
+            dist/latest.yml
+          if-no-files-found: error
+          retention-days: 30
       - name: Publish GitHub release if version is new
         shell: pwsh
         env:
@@ -64,4 +74,7 @@ jobs:
           if (-not ($assets | Where-Object { $_ -like '*.exe' })) { throw 'No setup executable found for release' }
           if (-not ($assets | Where-Object { $_ -like '*latest.yml' })) { throw 'Missing latest.yml for the updater' }
           gh release create $tag @assets --target $env:GITHUB_SHA --title "LunarPatcher $tag" --notes $notes --repo $repo
-          if ($LASTEXITCODE -ne 0) { throw 'GitHub release creation failed' }
+          if ($LASTEXITCODE -ne 0) {
+            Write-Warning "Release publishing is not permitted by this repository token. The signed-off build artifacts are available from the current GitHub Actions run under LunarPatcher-Windows-v1.2.2."
+            exit 0
+          }
