@@ -31,6 +31,19 @@ func TestHomeToolsInsertionSurvivesDifferentJSXClosing(t *testing.T) {
 		!strings.Contains(patched, "(0,V.jsxs)(p,{width:`400px`") {
 		t.Fatal("home toolbar or friends column was lost")
 	}
+    // A native Latest News child must be replaced in-place, not stacked.
+    withNews := strings.Replace(js,
+        "]}),(0,V.jsxs)(p,{width:`400px`",
+        ",(0,V.jsx)(kU,{})]}),(0,V.jsxs)(p,{width:`400px`", 1)
+    if withNews == js {
+        t.Fatal("fixture failed to insert native news")
+    }
+    replaced, err := injectHomeTools332(withNews)
+    if err != nil { t.Fatal(err) }
+    if strings.Contains(replaced, "(0,V.jsx)(kU,{})") ||
+       strings.Count(replaced, "(0,V.jsx)(lunarPatcherHomeTools,{})") != 1 {
+        t.Fatal("native news must be replaced, not stacked")
+    }
 	bad := strings.Replace(js, "(0,V.jsx)(gU,{})", "(0,V.jsx)(unknownControl,{})", 1)
 	if _, err := injectHomeTools332(bad); err == nil {
 		t.Fatal("must refuse an unrecognized toolbar")
@@ -72,6 +85,8 @@ func TestUploaded332HomeToolsInsertionVariation(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, expected := range []string{
+		"kU=({lunarPatcherUpdatesOnly:lpUpdates=false}={})=>{if(!lpUpdates)return null;",
+		"(0,V.jsx)(kU,{lunarPatcherUpdatesOnly:!0})",
 		"lunarPatcherHomeTools=", "lunarPatcherUpdatesPage=",
 		"(0,V.jsx)(iU,{full:!0,mode:`list`,rootRef:D})",
 		"(0,V.jsx)(aU,{key:`launcher-update`})",
@@ -82,5 +97,32 @@ func TestUploaded332HomeToolsInsertionVariation(t *testing.T) {
 	}
 	if err := os.WriteFile("/mnt/data/LunarPatcher_v121_layout_regression.mjs", result, 0600); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestHomeGridAndSakuraStyling(t *testing.T) {
+	for _, mode := range []string{"layout", "sakura", "color"} {
+		css := makeCSS(mode, "#E59CBC")
+		for _, selector := range []string{
+			"grid-template-columns:minmax(0,1fr)",
+			"#root .lunar-patcher-home-content>*:first-child",
+			"#root .lunar-patcher-home-content>.lunar-patcher-friends",
+			"#root .lunar-patcher-shortcuts",
+		} {
+			if !strings.Contains(css, selector) { t.Fatalf("mode %s missing selector %q", mode, selector) }
+		}
+	}
+	sakura := makeCSS("sakura", "#0000ff")
+	for _, selector := range []string{
+		"--lunar-sakura-wallpaper",
+		"#root .lunar-patcher-friends,#root .lunar-patcher-section",
+		"#root .lunar-patcher-hero::after",
+		"#root .lunar-patcher-shortcut:hover",
+	} {
+		if !strings.Contains(sakura, selector) { t.Fatalf("Sakura missing %q", selector) }
+	}
+	if strings.Contains(makeCSS("layout", "#E59CBC"), "--lunar-sakura-wallpaper") ||
+	   strings.Contains(makeCSS("color", "#E59CBC"), "--lunar-sakura-wallpaper") {
+		t.Fatal("only the Sakura mode may inject the Sakura wallpaper")
 	}
 }
