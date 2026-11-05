@@ -31,6 +31,93 @@ func replaceUnique(s, old, next, name string) (string, error) {
 	return strings.Replace(s, old, next, 1), nil
 }
 
+// injectHomeTools332 finds the first-column home composition and appends the
+// shortcuts beneath its launch panel. We deliberately do not match the exact
+// minifier-generated JSX closing sequence: Lunar can change that while keeping
+// the relevant component structure intact.
+// It is bounded to the known 3.7.32 home function and refuses ambiguous input.
+func injectHomeTools332(s string) (string, error) {
+	const home = "dW=()=>{"
+	const column = "(0,V.jsxs)(El,{children:["
+	homeIndex := strings.Index(s, home)
+	if homeIndex < 0 || strings.Count(s, home) != 1 {
+		return "", errors.New("home component signature changed; no patch applied")
+	}
+	// Do not let a non-home component with a matching column name get patched.
+	regionEnd := homeIndex + 10000
+	if regionEnd > len(s) {
+		regionEnd = len(s)
+	}
+	region := s[homeIndex:regionEnd]
+	if strings.Count(region, column) != 1 {
+		return "", errors.New("home column is missing or ambiguous; no patch applied")
+	}
+	start := homeIndex + strings.Index(region, column) + len(column) - 1
+	end, err := matchJSArray(s, start, 6000)
+	if err != nil {
+		return "", fmt.Errorf("home column could not be parsed: %w; no patch applied", err)
+	}
+	contents := s[start+1 : end]
+	if strings.Count(contents, "(0,V.jsxs)(pU,{className:`lunar-patcher-hero`,background:u.src,onLoad:") != 1 ||
+		strings.Count(contents, "onOptionsClick:()=>{window.lunar.misc.switchRoute") != 1 ||
+		strings.Count(contents, "(0,V.jsx)(aU,") != 1 ||
+		strings.Count(contents, "(0,V.jsx)(gU,") != 1 {
+		return "", fmt.Errorf("launch panel or controls changed (hero=%d, options=%d, toolbar=%d/%d); no patch applied", strings.Count(contents, "(0,V.jsxs)(pU,{className:`lunar-patcher-hero`,background:u.src,onLoad:"), strings.Count(contents, "onOptionsClick:()=>{window.lunar.misc.switchRoute"), strings.Count(contents, "(0,V.jsx)(aU,"), strings.Count(contents, "(0,V.jsx)(gU,"))
+	}
+	// The first column must still be immediately followed by the separate
+	// friends column; otherwise this would insert into an unrelated JSX array.
+	after := s[end:]
+	if !strings.HasPrefix(after, "]}),(0,V.jsxs)(p,{") ||
+		!strings.Contains(after[:min(len(after), 1200)], "(0,V.jsx)(iU,{full:n===!1,mode:O,rootRef:D})") {
+		return "", errors.New("friends/home column boundary changed; no patch applied")
+	}
+	return s[:end] + ",(0,V.jsx)(lunarPatcherHomeTools,{})" + s[end:], nil
+}
+
+// matchJSArray finds the closing ] for a source-level array, ignoring bracket
+// characters within quoted JS strings/templates. Limit the scan to avoid
+// accidentally matching a later component after an upstream syntax change.
+func matchJSArray(s string, start, maxBytes int) (int, error) {
+	if start < 0 || start >= len(s) || s[start] != '[' {
+		return -1, errors.New("expected JS children array")
+	}
+	depth := 0
+	var quote byte
+	escaped := false
+	limit := start + maxBytes
+	if limit > len(s) {
+		limit = len(s)
+	}
+	for i := start; i < limit; i++ {
+		ch := s[i]
+		if quote != 0 {
+			if escaped {
+				escaped = false
+			} else if ch == '\\' {
+				escaped = true
+			} else if ch == quote {
+				quote = 0
+			}
+			continue
+		}
+		switch ch {
+		case '\'', '"', '`':
+			quote = ch
+		case '[':
+			depth++
+		case ']':
+			depth--
+			if depth == 0 {
+				return i, nil
+			}
+			if depth < 0 {
+				return -1, errors.New("unexpected closing bracket")
+			}
+		}
+	}
+	return -1, errors.New("unterminated or unusually large JS children array")
+}
+
 func patchHome332(s string) ([]byte, error) {
 	var err error
 	s, err = replaceUnique(s,
@@ -55,9 +142,7 @@ func patchHome332(s string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	s, err = replaceUnique(s,
-		"(0,V.jsx)(aU,{})]})]})]}),",
-		"(0,V.jsx)(aU,{})]})]}),(0,V.jsx)(lunarPatcherHomeTools,{})]}),", "home tools insertion")
+	s, err = injectHomeTools332(s)
 	if err != nil {
 		return nil, err
 	}
