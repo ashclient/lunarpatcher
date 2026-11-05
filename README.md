@@ -53,3 +53,7 @@ GitHub Actions performs Go tests, JS syntax checks, builds the Go helper and pub
 - `.github/workflows/`: Windows CI and release packaging.
 
 The app currently checks its own updates, not Lunar's. Patching should be reapplied after a supported Lunar update.
+
+## 1.2.1 compatibility fix
+
+The home tools insertion now matches the known home composition instead of relying on a fragile exact JSX closing suffix. Layout and themed modes still refuse unknown structures safely; Ads Only does not modify the home layout.
