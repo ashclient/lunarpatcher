@@ -1,0 +1,6 @@
+/dist/
+/installer/dist/
+*.exe
+*.log
+*.test
+*.tmp

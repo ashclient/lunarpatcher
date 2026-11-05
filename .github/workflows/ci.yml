@@ -1,0 +1,21 @@
+name: Build and Test
+on:
+  push:
+    branches: [main]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - run: go test ./...
+      - run: go build -ldflags "-H=windowsgui -X main.appVersion=1.0.0" -o LunarPatcher.exe .
+      - uses: actions/upload-artifact@v4
+        with:
+          name: LunarPatcher-Windows
+          path: LunarPatcher.exe

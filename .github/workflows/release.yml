@@ -1,0 +1,51 @@
+name: Release Windows Application
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: Test source
+        run: go test ./...
+      - name: Build Windows app
+        shell: pwsh
+        run: |
+          $version = (Get-Content VERSION -Raw).Trim()
+          if ($version -notmatch '^\d+\.\d+\.\d+$') { throw 'Invalid version in VERSION' }
+          New-Item -ItemType Directory -Force installer/dist | Out-Null
+          go build -ldflags "-H=windowsgui -s -w -X main.appVersion=$version" -o installer/dist/LunarPatcher.exe .
+      - name: Install Inno Setup
+        shell: pwsh
+        run: choco install innosetup -y --no-progress
+      - name: Build installer
+        shell: pwsh
+        run: |
+          $env:APP_VERSION = (Get-Content VERSION -Raw).Trim()
+          & 'C:\Program Files (x86)\Inno Setup 6\ISCC.exe' 'installer\LunarPatcher.iss'
+      - name: Create checksum
+        shell: pwsh
+        run: |
+          $f = 'installer/dist/LunarPatcher_Setup.exe'
+          $hash = (Get-FileHash -Algorithm SHA256 $f).Hash.ToLowerInvariant()
+          "$hash  LunarPatcher_Setup.exe" | Set-Content -Encoding ascii 'installer/dist/LunarPatcher_Setup.exe.sha256'
+      - name: Publish versioned release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $version = (Get-Content VERSION -Raw).Trim()
+          $tag = 'v' + $version
+          gh release view $tag --repo "$env:GITHUB_REPOSITORY" *> $null
+          if ($LASTEXITCODE -eq 0) {
+            Write-Host "Release $tag already exists; skipping"
+            exit 0
+          }
+          gh release create $tag 'installer/dist/LunarPatcher_Setup.exe' 'installer/dist/LunarPatcher_Setup.exe.sha256' 'installer/dist/LunarPatcher.exe' --target "$env:GITHUB_SHA" --title "LunarPatcher $tag" --generate-notes --repo "$env:GITHUB_REPOSITORY"
