@@ -1,7 +1,7 @@
 {
   "name": "lunarpatcher",
   "productName": "LunarPatcher",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Independent desktop customizer for Lunar Client",
   "author": "ashclient",
   "license": "MIT",
@@ -23,10 +23,32 @@
   "build": {
     "appId": "xyz.ashclient.lunarpatcher",
     "productName": "LunarPatcher",
-    "directories": {"output": "dist", "buildResources": "build"},
-    "files": ["electron/**/*", "package.json", "!**/*.map"],
-    "extraResources": [{"from": "build/bin/LunarPatcherEngine.exe", "to": "engine/LunarPatcherEngine.exe"}],
-    "win": {"icon": "build/icon.ico", "target": [{"target": "nsis", "arch": ["x64"]}]},
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "electron/**/*",
+      "package.json",
+      "!**/*.map"
+    ],
+    "extraResources": [
+      {
+        "from": "build/bin/LunarPatcherEngine.exe",
+        "to": "engine/LunarPatcherEngine.exe"
+      }
+    ],
+    "win": {
+      "icon": "build/icon.ico",
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
@@ -38,6 +60,11 @@
       "deleteAppDataOnUninstall": false,
       "uninstallDisplayName": "LunarPatcher"
     },
-    "publish": {"provider": "github", "owner": "ashclient", "repo": "lunarpatcher", "releaseType": "release"}
+    "publish": {
+      "provider": "github",
+      "owner": "ashclient",
+      "repo": "lunarpatcher",
+      "releaseType": "release"
+    }
   }
 }

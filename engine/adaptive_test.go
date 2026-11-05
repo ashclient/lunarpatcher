@@ -34,7 +34,7 @@ func TestVersionNeutralAndFailClosed(t *testing.T) {
 	if e != nil {
 		t.Fatal(e)
 	}
-	if r.Announcements != "News-feed component disabled" {
+	if r.Announcements != "News moved to Updates; Quick Play, shortcuts, and full friends list enabled" {
 		t.Fatalf("homepage announcements not removed: %s", r.Announcements)
 	}
 	mainBefore, _ := a.entry("dist/assets/main.js")
@@ -43,8 +43,8 @@ func TestVersionNeutralAndFailClosed(t *testing.T) {
 		t.Fatal(err)
 	}
 	mainAfter, _ := archiveAfter.entry("dist/assets/main.js")
-	if len(mainBefore)-len(mainAfter) < 1000 || !bytes.Contains(mainAfter, []byte("eK=()=>null")) {
-		t.Fatal("expected actual blog-post component disabled")
+	if bytes.Equal(mainBefore, mainAfter) || !bytes.Contains(mainAfter, []byte("lunarPatcherHomeTools=")) || !bytes.Contains(mainAfter, []byte("lunarPatcherUpdatesPage=")) {
+		t.Fatal("expected home tools, expanded friends and updates route")
 	}
 	if !bytes.Contains(mainAfter, []byte("onOptionsClick:")) {
 		t.Fatal("must keep launcher settings controls")
@@ -162,10 +162,22 @@ func TestFullLifecycle(t *testing.T) {
 	}
 }
 
-func TestAnnouncementGuard(t *testing.T) {
-	src := []byte("irrelevant component with no supported launch/news structure")
-	if _, err := removeHomeAnnouncements(src); err == nil {
-		t.Fatal("must refuse unrecognized homepage structure")
+func TestUnknownLayoutFailsClosed(t *testing.T) {
+	if _, err := patchHomeLayout([]byte("unrecognized launcher home")); err == nil {
+		t.Fatal("must refuse unrecognized homepage composition")
+	}
+}
+func TestThemeModesRemainIndependent(t *testing.T) {
+	s := makeCSS("sakura", "#0088FF")
+	if !strings.Contains(s, "data:image/jpeg;base64,") || !strings.Contains(s, ".lunar-patcher-home") {
+		t.Fatal("Sakura wallpaper or scoped home styling missing")
+	}
+	c := makeCSS("color", "#0088FF")
+	if strings.Contains(c, "data:image/jpeg;base64,") || !strings.Contains(c, "#0088ff") {
+		t.Fatal("custom color accidentally contains Sakura or ignores selected color")
+	}
+	if strings.Contains(s, "%!") || strings.Contains(c, "%!") {
+		t.Fatal("invalid fmt CSS placeholder")
 	}
 }
 
@@ -236,8 +248,14 @@ func TestCurrentUploadedLauncher3_7_32(t *testing.T) {
 		}
 		if mode != "ads" {
 			patched, _ := b.entry("dist/assets/main.js")
-			if bytes.Equal(main, patched) || !bytes.Contains(patched, []byte("kU=()=>null")) {
-				t.Fatalf("%s: news renderer did not change", mode)
+			if bytes.Equal(main, patched) || !bytes.Contains(patched, []byte("lunarPatcherHomeTools=")) || !bytes.Contains(patched, []byte("lunarPatcherUpdatesPage=")) {
+				t.Fatalf("%s: homepage tools / updates route missing", mode)
+			}
+			if !bytes.Contains(patched, []byte("(0,V.jsx)(iU,{full:!0,mode:`list`,rootRef:D})")) {
+				t.Fatal("friends panel not forced to full list")
+			}
+			if !bytes.Contains(patched, []byte("kU=()=>{")) {
+				t.Fatal("original announcements component lost; Updates would be empty")
 			}
 			if !bytes.Contains(patched, []byte("(0,V.jsx)(aU,{})")) || !bytes.Contains(patched, []byte("(0,V.jsx)(gU,{})")) {
 				t.Fatal("toolbar controls must remain")
@@ -246,32 +264,5 @@ func TestCurrentUploadedLauncher3_7_32(t *testing.T) {
 				t.Fatal(err)
 			}
 		}
-	}
-}
-
-// Portable regression test: CI does not include proprietary Lunar archives.
-// Ensures the news transformation targets only the news component and leaves
-// surrounding toolbar functions available.
-func TestNewsGuardPortable(t *testing.T) {
-	prefix := []byte("settingsButton=()=>42,cancelLaunch=()=>33,")
-	news := []byte("kU=()=>{let{t:x}=NU(),v=e=>e.metadata.blogPosts;")
-	news = append(news, []byte(strings.Repeat("a", 500)+"home.latest-news;home_blog_post;home_news;"+strings.Repeat("b", 510))...)
-	tail := []byte("},nextThing=Foo({base:{backgroundOrigin:`border-box`,settings:settingsButton,cancel:cancelLaunch})")
-	source := append(append(append([]byte{}, prefix...), news...), tail...)
-	modified, err := removeHomeAnnouncements(source)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !bytes.Contains(modified, []byte("kU=()=>null")) {
-		t.Fatal("news component not replaced")
-	}
-	if !bytes.Contains(modified, []byte("settingsButton=()=>42,cancelLaunch=()=>33")) {
-		t.Fatal("launch controls changed")
-	}
-	if !bytes.Contains(modified, []byte("nextThing=Foo")) {
-		t.Fatal("following component changed")
-	}
-	if bytes.Contains(modified, []byte("home_blog_post")) {
-		t.Fatal("news component remains")
 	}
 }

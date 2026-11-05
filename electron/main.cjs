@@ -58,11 +58,10 @@ function execBackend(args) {
 }
 function createWindow() {
   win = new BrowserWindow({
-    width:1130,height:750,minWidth:940,minHeight:650,
-    show:false,backgroundColor:'#141118',
+    width:920,height:800,minWidth:800,minHeight:685,
+    show:false,backgroundColor:'#17191e',
     icon:path.join(__dirname,'assets','icon.png'),
     title:'LunarPatcher',
-    ...(process.platform==='win32'?{titleBarStyle:'hidden',titleBarOverlay:{color:'#19151F',symbolColor:'#E9DBE5',height:46}}:{}),
     webPreferences:{preload:path.join(__dirname,'preload.cjs'),contextIsolation:true,nodeIntegration:false,sandbox:true,
       webSecurity:true,devTools:!app.isPackaged}
   });

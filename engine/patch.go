@@ -41,8 +41,6 @@ var guardPattern = regexp.MustCompile(`if\(!\([\w$]+&&[\w$]+\.willShowAd\)\)retu
 
 // A signature for the standalone news component, not the adjacent Launch
 // toolbar. The previous implementation accidentally matched the Settings icon.
-var newsFunctionStart = regexp.MustCompile(`[A-Za-z_$][\w$]*=\(\)=>\{let\{t:[A-Za-z_$][\w$]*\}=[A-Za-z_$][\w$]*\(\),`)
-var newsFunctionEnd = regexp.MustCompile(`\},[A-Za-z_$][\w$]*=[A-Za-z_$][\w$]*\(\{base:\{backgroundOrigin:\x60border-box\x60`)
 var headTag = regexp.MustCompile(`(?i)</head\s*>`)
 var bodyTag = regexp.MustCompile(`(?i)</body\s*>`)
 var hexColor = regexp.MustCompile(`^#[0-9a-fA-F]{6}$`)
@@ -200,49 +198,6 @@ func parseVersion(a *asarArchive) string {
 	return "unknown"
 }
 
-// removeHomeAnnouncements disables exactly the blog/news component with
-// metadata.blogPosts and home.latest-news. It must never touch the settings,
-// cancel-launch or friends controls adjacent to the launch button.
-func removeHomeAnnouncements(src []byte) ([]byte, error) {
-	key := []byte("e=>e.metadata.blogPosts")
-	if bytes.Count(src, key) != 1 {
-		return nil, errors.New("news component signature missing or ambiguous; no patch applied")
-	}
-	p := bytes.Index(src, key)
-	lo := max(0, p-260)
-	candidates := newsFunctionStart.FindAllIndex(src[lo:p], -1)
-	if len(candidates) != 1 {
-		return nil, fmt.Errorf("news component start changed (%d candidates)", len(candidates))
-	}
-	begin := lo + candidates[0][0]
-	hi := min(len(src), p+8000)
-	// The following status-icon component is a stable, unique boundary in
-	// both tested bundles. Anchor against it instead of guessing JSX delimiters.
-	ends := newsFunctionEnd.FindAllIndex(src[p:hi], -1)
-	if len(ends) != 1 {
-		return nil, fmt.Errorf("news component boundary changed (%d candidates)", len(ends))
-	}
-	// Keep the following comma and next variable assignment intact.
-	end := p + ends[0][0] + 1
-	segment := src[begin:end]
-	if !bytes.Contains(segment, []byte("home.latest-news")) ||
-		!bytes.Contains(segment, []byte("home_blog_post")) ||
-		!bytes.Contains(segment, []byte("home_news")) ||
-		len(segment) < 1000 || len(segment) > 7500 {
-		return nil, errors.New("news component safeguards did not match; refusing patch")
-	}
-	lhs := bytes.Index(segment, []byte("=()=>"))
-	if lhs < 1 || lhs > 80 {
-		return nil, errors.New("unexpected news component declaration")
-	}
-	replacement := append(append([]byte{}, segment[:lhs]...), []byte("=()=>null")...)
-	out := make([]byte, 0, len(src)-len(segment)+len(replacement))
-	out = append(out, src[:begin]...)
-	out = append(out, replacement...)
-	out = append(out, src[end:]...)
-	return out, nil
-}
-
 func patchSource(asarBytes []byte, mode, color string) ([]byte, PatchReport, error) {
 	report := PatchReport{Mode: mode, Color: color}
 	if mode != "color" {
@@ -299,26 +254,25 @@ func patchSource(asarBytes []byte, mode, color string) ([]byte, PatchReport, err
 		if !exists {
 			return nil, report, errors.New("main launcher renderer moved; homepage announcements cannot be removed safely")
 		}
-		revised, err := removeHomeAnnouncements(main)
+		revised, err := patchHomeLayout(main)
 		if err != nil {
 			return nil, report, err
 		}
 		changes[mainName] = revised
-		report.Announcements = "News-feed component disabled"
+		report.Announcements = "News moved to Updates; Quick Play, shortcuts, and full friends list enabled"
 	} else {
 		report.Announcements = "Unchanged in Ads Only mode"
 	}
 	if mode == "layout" {
-		report.Theme = "Clean homepage and layout styling"
-		report.Notes = append(report.Notes, "Full friends panel and Updates route still require a build-specific React patch")
+		report.Theme = "Full friends list, Quick Play, shortcuts and Updates"
 	}
 	if mode == "sakura" {
 		report.Theme = "Sakura pink landscape"
-		report.Notes = append(report.Notes, "Fixed pink cherry-blossom wallpaper and matching panels. Choose Custom Color for a plain color-based theme")
+		report.Notes = append(report.Notes, "Full friends list, Quick Play and separate Updates page with Sakura wallpaper and rosy surfaces")
 	}
 	if mode == "color" {
 		report.Theme = "Custom Color"
-		report.Notes = append(report.Notes, "The chosen color controls the launcher background and compatible panels, without Sakura artwork")
+		report.Notes = append(report.Notes, "The chosen color controls the launcher background and compatible panels, without Sakura artwork; full friends and shortcuts are included")
 	}
 	if mode == "ads" {
 		report.Theme = "Original layout"
@@ -338,42 +292,71 @@ func colorPalette(hex string) (string, string, string, string) {
 	}
 	return fmt.Sprintf("#%02x%02x%02x", r, g, b), mix(.32, 0), mix(.56, 0), mix(.40, 255)
 }
+
+// Theme selectors are anchored to JSX classes inserted by patchHomeLayout.
+// Styling a stable, explicitly marked component is more reliable than trying
+// to theme every hashed class that Lunar uses internally.
 func makeCSS(mode, color string) string {
-	basic := `#root .lunar-adaptive-ads,[data-ad-placement="Home"],[data-ad-placement="HomeTop"],iframe[src*="playwire"],iframe[src*="overwolf"],iframe[src*="doubleclick.net"]{display:none!important}`
-	switch mode {
-	case "ads":
-		return basic
-	case "layout":
-		return basic + ` #root{--lunar-adaptive-radius:10px} #root button{transition:background-color .15s ease} #root button:focus-visible{outline:2px solid #cf88b4;outline-offset:2px}`
-	case "sakura":
-		// Sakura remains a fixed rose-pink landscape. The custom color is NOT used.
-		return basic + fmt.Sprintf(`
-html.dark,html.dark body{background:#b96892!important}
-#root{--colors-space-1:#8c4670!important;--colors-space-2:#99537b!important;--colors-space-3:#ab628a!important;--colors-space-4:#b97298!important;--colors-midnight-1:#713254!important;--colors-space-a4:#d783b0!important;
- background:linear-gradient(135deg,rgba(221,105,164,.28),rgba(106,43,85,.31)),url("data:image/jpeg;base64,%s") center center/cover no-repeat fixed!important;color:#fff4f9}
-#root>div{background-color:transparent!important}
-#root [class*="sidebar"],#root [class*="Sidebar"],#root [class*="friends"],#root [class*="Friends"],#root .lunar-clean-friends,#root .lunar-clean-quick-play,#root .lunar-clean-shortcuts{background-color:rgba(151,68,110,.78)!important;border-color:rgba(255,191,224,.55)!important}
-#root [class*="Card"],#root [class*="panel"],#root [class*="Panel"]{border-color:rgba(255,188,220,.43)}
-#root button:focus-visible{outline:2px solid #ffc9e2!important;outline-offset:2px}
-#root ::-webkit-scrollbar-thumb{background:rgba(255,181,221,.55)!important}
-`, base64.StdEncoding.EncodeToString(sakuraWallpaper))
-	case "color":
-		// Color mode has NO sakura landscape: a pure palette-based gradient.
-		base, dark, deep, light := colorPalette(color)
-		return basic + fmt.Sprintf(`
-html.dark,html.dark body{background:%s!important}
-#root{--colors-space-1:%s!important;--colors-space-2:%s!important;--colors-space-3:%s!important;--colors-space-4:%s!important;--colors-midnight-1:%s!important;--colors-space-a4:%s!important;
- background:linear-gradient(145deg,%s 0%%,%s 50%%,%s 100%%) center center/cover no-repeat fixed!important;color:#fff4f9}
-#root>div{background-color:transparent!important}
-#root [class*="sidebar"],#root [class*="Sidebar"],#root [class*="friends"],#root [class*="Friends"],#root .lunar-clean-friends,#root .lunar-clean-quick-play,#root .lunar-clean-shortcuts{background-color:%sE6!important;border-color:%s88!important}
-#root [class*="Card"],#root [class*="panel"],#root [class*="Panel"]{border-color:%s88}
-#root button:focus-visible{outline:2px solid %s!important;outline-offset:2px}
-#root ::-webkit-scrollbar-thumb{background:%s!important}
-`, base, deep, dark, base, deep, base, light, base, dark, deep, dark, light, light, light, light)
-	default:
-		return basic
+	const adsCSS = `
+#root .lunar-adaptive-ads,[data-ad-placement="Home"],[data-ad-placement="HomeTop"],iframe[src*="playwire"],iframe[src*="overwolf"],iframe[src*="doubleclick.net"]{display:none!important}
+`
+	const layoutCSS = `
+#root .lunar-patcher-home{padding:0 12px 16px;box-sizing:border-box;border-radius:12px;min-width:0;min-height:0}
+#root .lunar-patcher-home-content{min-height:0;min-width:0}
+#root .lunar-patcher-home-tools{display:flex;flex-direction:column;gap:13px;margin:14px 0 8px;min-width:0}
+#root .lunar-patcher-section{padding:14px;border-radius:11px;border:1px solid rgba(180,190,210,.16);background:rgba(29,32,41,.92);overflow:hidden;min-width:0}
+#root .lunar-patcher-section>h3{color:#e9e9ee;font-size:13px;font-weight:650;line-height:1.3;margin:0 0 12px}
+#root .lunar-patcher-friends{box-sizing:border-box!important;overflow-y:auto!important;overflow-x:hidden!important;padding:15px 13px!important;background:rgba(29,32,41,.93)!important;border-radius:12px!important;border:1px solid rgba(180,190,210,.16)!important}
+#root .lunar-patcher-shortcuts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+#root .lunar-patcher-shortcut{font-family:inherit;font-size:13px;font-weight:600;line-height:1.2;min-height:44px;padding:10px 8px;border-radius:8px;color:#ebebf0;border:1px solid rgba(190,192,211,.18);background:rgba(110,121,146,.14);cursor:pointer}
+#root .lunar-patcher-shortcut:hover{background:rgba(152,161,191,.25);border-color:rgba(192,206,228,.4)}
+#root .lunar-patcher-updates{height:100%;overflow-y:auto;display:flex;flex-direction:column;gap:14px;padding:20px 24px}
+#root .lunar-patcher-updates>h1{font-size:22px;font-weight:700;margin:0;color:inherit}
+#root button:focus-visible{outline:2px solid #e5a3c5;outline-offset:2px}
+@media(max-width:1000px){#root .lunar-patcher-friends{width:310px!important}#root .lunar-patcher-shortcuts{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(prefers-reduced-motion:reduce){#root .lunar-patcher-shortcut{transition:none!important}}
+`
+	if mode == "ads" {
+		return adsCSS
 	}
+	if mode == "layout" {
+		return adsCSS + layoutCSS
+	}
+	if mode == "sakura" {
+		artwork := "data:image/jpeg;base64," + base64.StdEncoding.EncodeToString(sakuraWallpaper)
+		return adsCSS + layoutCSS + fmt.Sprintf(`
+html.dark,html.dark body{background:#8b4c74!important}
+#root{--colors-space-1:#783d60!important;--colors-space-2:#85476b!important;--colors-space-3:#985377!important;--colors-space-4:#ad6489!important;--colors-midnight-1:#683151!important;--colors-space-a4:rgba(246,154,195,.25)!important;--lunar-sakura-wallpaper:url("%s");background:linear-gradient(120deg,rgba(103,42,80,.17),rgba(206,115,167,.17)),var(--lunar-sakura-wallpaper) center/cover no-repeat fixed!important}
+#root>div{background-color:transparent!important}
+#root .lunar-patcher-home{background:linear-gradient(145deg,rgba(79,27,62,.35),rgba(79,31,65,.27)),var(--lunar-sakura-wallpaper) center center/cover no-repeat!important;box-shadow:inset 0 0 0 1px rgba(254,188,221,.25)!important}
+#root .lunar-patcher-home-content{background:transparent!important}
+#root .lunar-patcher-hero{position:relative!important;overflow:hidden!important;border:1px solid rgba(252,186,220,.55)!important;isolation:isolate}
+#root .lunar-patcher-hero::after{content:"";position:absolute;inset:0;pointer-events:none;background:var(--lunar-sakura-wallpaper) center/cover no-repeat;opacity:.33;mix-blend-mode:screen;z-index:1}
+#root .lunar-patcher-friends,#root .lunar-patcher-section{background:linear-gradient(150deg,rgba(111,49,84,.9),rgba(137,66,104,.87))!important;border-color:rgba(255,184,218,.40)!important;backdrop-filter:blur(10px)!important}
+#root .lunar-patcher-section>h3{color:#ffe5f2}
+#root .lunar-patcher-shortcut{color:#ffeef7;background:rgba(235,147,188,.18);border-color:rgba(254,202,226,.30)}
+#root .lunar-patcher-shortcut:hover{background:rgba(248,171,211,.3);border-color:#fbcce3}
+#root .lunar-patcher-updates{background:linear-gradient(145deg,rgba(116,54,94,.85),rgba(75,30,64,.87))!important}
+#root ::-webkit-scrollbar-thumb{background:rgba(255,177,216,.54)!important}
+`, artwork)
+	}
+	if mode == "color" {
+		base, dark, deep, light := colorPalette(color)
+		return adsCSS + layoutCSS + fmt.Sprintf(`
+html.dark,html.dark body{background:%s!important}
+#root{--colors-space-1:%s!important;--colors-space-2:%s!important;--colors-space-3:%s!important;--colors-space-4:%s!important;--colors-midnight-1:%s!important;--colors-space-a4:%s!important;background:linear-gradient(145deg,%s,%s)!important}
+#root>div{background-color:transparent!important}
+#root .lunar-patcher-home{background:linear-gradient(145deg,%s,%s)!important;box-shadow:inset 0 0 0 1px %s66!important}
+#root .lunar-patcher-friends,#root .lunar-patcher-section{background:%sDD!important;border-color:%s88!important}
+#root .lunar-patcher-shortcut{background:%s55!important;border-color:%s88!important;color:#ffffff}
+#root .lunar-patcher-shortcut:hover{background:%s99!important}
+#root .lunar-patcher-updates{background:%s!important}
+#root button:focus-visible{outline:2px solid %s!important}
+`, base, deep, dark, base, deep, deep, base, base, dark, base, dark, light, deep, light, base, light, deep, light, light)
+	}
+	return adsCSS
 }
+
 func Install(base, mode, color string, checkOnly bool) (PatchReport, error) {
 	report := PatchReport{Mode: mode, Color: color}
 	if mode != "color" {
