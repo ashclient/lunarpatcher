@@ -254,8 +254,8 @@ func TestCurrentUploadedLauncher3_7_32(t *testing.T) {
 			if !bytes.Contains(patched, []byte("(0,V.jsx)(iU,{full:!0,mode:`list`,rootRef:D})")) {
 				t.Fatal("friends panel not forced to full list")
 			}
-			if !bytes.Contains(patched, []byte("kU=({lunarPatcherUpdatesOnly:lpUpdates=false}={})=>{if(!lpUpdates)return null;")) || !bytes.Contains(patched, []byte("(0,V.jsx)(kU,{lunarPatcherUpdatesOnly:!0})")) {
-				t.Fatal("original news feed must render only in the Updates route")
+			if !bytes.Contains(patched, []byte("kU=()=>{")) {
+				t.Fatal("original announcements component lost; Updates would be empty")
 			}
 			if !bytes.Contains(patched, []byte("(0,V.jsx)(aU,{})")) || !bytes.Contains(patched, []byte("(0,V.jsx)(gU,{})")) {
 				t.Fatal("toolbar controls must remain")

@@ -9,7 +9,7 @@ import (
 
 // patchHomeLayout replaces the 3.7.32 home composition with a full native
 // friends list plus real server quick-play and navigation shortcuts. It keeps
-// the original launch toolbar and renders the news feed ONLY under Updates.
+// the original launch toolbar and news renderer, exposing news under Updates.
 // These are version-specific, checked transformations: unknown builds fail
 // without installing a partially styled or empty home page.
 func patchHomeLayout(source []byte) ([]byte, error) {
@@ -70,17 +70,6 @@ func injectHomeTools332(s string) (string, error) {
 	if !strings.HasPrefix(after, "]}),(0,V.jsxs)(p,{") ||
 		!strings.Contains(after[:min(len(after), 1200)], "(0,V.jsx)(iU,{full:n===!1,mode:O,rootRef:D})") {
 		return "", errors.New("friends/home column boundary changed; no patch applied")
-	}
-	// Replace a news entry in the home column if a Lunar update places one
-	// there. Never append the tools on top of a still-mounted news feed.
-	// The current 3.7.32 fixture has no direct news JSX in this column; the
-	// component itself is additionally gated below to handle other mounts.
-	const nativeNews = "(0,V.jsx)(kU,{})"
-	if n := strings.Count(contents, nativeNews); n > 1 {
-		return "", fmt.Errorf("home news is ambiguous (%d entries); no patch applied", n)
-	} else if n == 1 {
-		modified := strings.Replace(contents, nativeNews, "(0,V.jsx)(lunarPatcherHomeTools,{})", 1)
-		return s[:start+1] + modified + s[end:], nil
 	}
 	return s[:end] + ",(0,V.jsx)(lunarPatcherHomeTools,{})" + s[end:], nil
 }
@@ -153,14 +142,6 @@ func patchHome332(s string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	// kU is the actual native Latest News feed. Guard the component itself,
-	// rather than relying on a CSS overlay or on an exact home-column position.
-	// Only the dedicated Updates route opts in to displaying the feed.
-	s, err = replaceUnique(s, "kU=()=>{let{t:e}=P(),",
-		"kU=({lunarPatcherUpdatesOnly:lpUpdates=false}={})=>{if(!lpUpdates)return null;let{t:e}=P(),", "native news route guard")
-	if err != nil {
-		return nil, err
-	}
 	s, err = injectHomeTools332(s)
 	if err != nil {
 		return nil, err
@@ -186,7 +167,7 @@ func patchHome332(s string) ([]byte, error) {
 	newFriends := "(0,V.jsx)(p,{className:`lunar-patcher-friends`,display:`flex`,flexDirection:`column`,flexShrink:0,gridColumn:`span 2`,height:`100%`,minHeight:`0`,width:`360px`,ref:i,children:(0,V.jsx)(iU,{full:!0,mode:`list`,rootRef:D})})"
 	s = s[:start] + newFriends + s[end:]
 	helpers := "lunarPatcherHomeTools=()=>{const go=(r)=>window.lunar.misc.switchRoute({route:r,initiator:Pn.sidebar_click});return(0,V.jsxs)(`div`,{className:`lunar-patcher-home-tools`,children:[(0,V.jsxs)(`section`,{className:`lunar-patcher-section`,children:[(0,V.jsx)(`h3`,{children:`Quick Play`}),(0,V.jsx)(nW,{})]}),(0,V.jsxs)(`section`,{className:`lunar-patcher-section`,children:[(0,V.jsx)(`h3`,{children:`Shortcuts`}),(0,V.jsxs)(`div`,{className:`lunar-patcher-shortcuts`,children:[(0,V.jsx)(`button`,{type:`button`,className:`lunar-patcher-shortcut`,onClick:()=>go(`/versions`),children:`Versions`}),(0,V.jsx)(`button`,{type:`button`,className:`lunar-patcher-shortcut`,onClick:()=>go(`/servers`),children:`Servers`}),(0,V.jsx)(`button`,{type:`button`,className:`lunar-patcher-shortcut`,onClick:()=>go(`/explore`),children:`Explore Mods`})]})]})]})},"
-	updates := "lunarPatcherUpdatesPage=()=> (0,V.jsxs)(`div`,{className:`lunar-patcher-updates`,children:[(0,V.jsx)(`h1`,{children:`Updates`}),(0,V.jsx)(kU,{lunarPatcherUpdatesOnly:!0})]}),"
+	updates := "lunarPatcherUpdatesPage=()=> (0,V.jsxs)(`div`,{className:`lunar-patcher-updates`,children:[(0,V.jsx)(`h1`,{children:`Updates`}),(0,V.jsx)(kU,{})]}),"
 	s, err = replaceUnique(s, "uW=Ke,dW=()=>", "uW=Ke,"+helpers+updates+"dW=()=>", "home/updates component injection")
 	if err != nil {
 		return nil, err

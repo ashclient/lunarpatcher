@@ -12,6 +12,7 @@ const HEX = /^#[\da-fA-F]{6}$/;
 let win;
 let busy = false;
 let readyToInstall = false;
+let updateCheckInFlight = false;
 let updateState = {phase:'idle', message:'Updates are checked automatically'};
 
 function prefsPath() { return path.join(app.getPath('userData'), 'preferences.json'); }
@@ -58,7 +59,7 @@ function execBackend(args) {
 }
 function createWindow() {
   win = new BrowserWindow({
-    width:920,height:800,minWidth:800,minHeight:685,
+    width:1080,height:790,minWidth:780,minHeight:650,
     show:false,backgroundColor:'#17191e',
     icon:path.join(__dirname,'assets','icon.png'),
     title:'LunarPatcher',
@@ -70,6 +71,20 @@ function createWindow() {
   win.webContents.setWindowOpenHandler(()=>({action:'deny'}));
   win.webContents.on('will-navigate',(event)=>event.preventDefault());
   win.on('closed',()=>{win=null});
+}
+async function checkForUpdates() {
+  if(!app.isPackaged) return {phase:'development',message:'Automatic updates are enabled in installed builds'};
+  if(readyToInstall || updateCheckInFlight) return updateState;
+  updateCheckInFlight=true;
+  try {
+    await autoUpdater.checkForUpdates();
+    return updateState;
+  } catch (error) {
+    appUpdate({phase:'error',message:'Update check failed: '+error.message});
+    throw error;
+  } finally {
+    updateCheckInFlight=false;
+  }
 }
 app.whenReady().then(()=>{
   createWindow();
@@ -109,23 +124,28 @@ app.whenReady().then(()=>{
     } finally {busy=false}
   });
   ipcMain.handle('updates:check',async()=>{
-    if(!app.isPackaged) return {phase:'development',message:'Automatic updates are available in installed builds'};
-    await autoUpdater.checkForUpdates();
-    return updateState;
+    return checkForUpdates();
   });
   ipcMain.handle('updates:install',()=>{
     if(!readyToInstall) throw new Error('No verified update has been downloaded');
-    autoUpdater.quitAndInstall(false,true);return true;
+    // electron-updater uses the verified installer from its cache, not Downloads.
+    // Silent NSIS update; force the app to relaunch when installation finishes.
+    autoUpdater.quitAndInstall(true,true);return true;
   });
   autoUpdater.autoDownload=true;
   autoUpdater.autoInstallOnAppQuit=true;
   autoUpdater.on('checking-for-update',()=>appUpdate({phase:'checking',message:'Checking GitHub Releases…'}));
   autoUpdater.on('update-available',info=>appUpdate({phase:'downloading',version:info.version,message:`Downloading LunarPatcher ${info.version}…`}));
-  autoUpdater.on('update-not-available',()=>appUpdate({phase:'current',message:'You’re running the latest version'}));
+  autoUpdater.on('update-not-available',()=>appUpdate({phase:'current',progress:0,version:null,message:'You’re running the latest version'}));
   autoUpdater.on('download-progress',p=>appUpdate({phase:'downloading',progress:Math.round(p.percent),message:`Downloading update · ${Math.round(p.percent)}%`}));
   autoUpdater.on('update-downloaded',info=>{readyToInstall=true;appUpdate({phase:'ready',version:info.version,progress:100,message:`Version ${info.version} is ready to install`})});
   autoUpdater.on('error',e=>appUpdate({phase:'error',message:`Update check failed: ${e.message}`}));
-  if(app.isPackaged) setTimeout(()=>autoUpdater.checkForUpdates().catch(()=>{}),3000);
+  if(app.isPackaged) {
+    setTimeout(()=>checkForUpdates().catch(()=>{}),5000);
+    // Recheck periodically for long-running sessions. An already downloaded
+    // update remains ready until restart rather than being downloaded again.
+    setInterval(()=>{if(!readyToInstall)checkForUpdates().catch(()=>{});},6*60*60*1000).unref?.();
+  }
 });
 app.on('window-all-closed',()=>{if(process.platform!=='darwin')app.quit()});
 app.on('activate',()=>{if(BrowserWindow.getAllWindows().length===0)createWindow()});

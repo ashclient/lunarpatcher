@@ -1,68 +1,47 @@
 # LunarPatcher
 
-An independent, open-source Windows application for customizing the Lunar Client **launcher**. Not affiliated with Lunar Client.
+An independent Windows desktop app for adjusting the **Lunar Client launcher**. Not affiliated with Lunar Client.
 
-## Features
+## Appearance modes
 
-LunarPatcher is a compact Electron desktop app (single settings window with native Windows frame). The modes are:
+- **Ads Only:** hide supported ad placements, preserve the Lunar homepage layout.
+- **Clean Layout:** use the full friends list, move news to Updates, and add Quick Play and shortcuts beneath Launch.
+- **Sakura:** Clean Layout plus the fixed cherry-blossom theme and matching panels.
+- **Custom Color:** Clean Layout with user-selected color, independent of Sakura.
 
-- **Ads Only:** hide recognized launcher ad placements, keeping Lunar's homepage layout.
-- **Clean Layout:** remove supported ads; restore the actual full friends list to the right; show the real server Quick Play panel and version/server/mod shortcuts beneath Launch; move the existing news feed to a dedicated Updates route.
-- **Sakura:** Clean Layout with cherry-blossom wallpaper and pink panels; always uses the fixed Sakura artwork, independent of the color picker.
-- **Custom Color:** Clean Layout with a chosen color and no Sakura art.
+The patch engine uses guarded renderer transforms and refuses unrecognized layout structures rather than rewriting an incompatible launcher. Backups and restoration are verified. Launcher updates may require a new patch engine. The original Lunar executable's digital signature is invalidated when patched.
 
-The **Updates** command in LunarPatcher checks the app's own GitHub Releases for new installers. It does not automatically bypass compatibility checks when Lunar changes.
+## Desktop application
 
-## Install and update
+The Electron UI is organized like Windows Settings: Appearance, Updates, and About. It follows Windows light/dark system preference and keeps Apply/Restore accessible in a persistent action bar. It uses a secure preload bridge with `contextIsolation`, sandboxing, and a restrictive content security policy.
 
-Download `LunarPatcher_Setup_<version>.exe` from [Releases](https://github.com/ashclient/lunarpatcher/releases). The Windows installer creates Start Menu and desktop shortcuts. The installed app uses `electron-updater` to check GitHub Releases and download subsequent versions; it prompts to restart and install. This is an unsigned community application, so Windows SmartScreen may warn.
+### In-app auto-updates (no Downloads folder)
 
-Close Lunar Client completely before applying a patch or restoring files. The original EXE and ASAR are backed up, verified and restored together. The patch invalidates the launcher executable's existing digital signature and may be incompatible with Lunar terms or future updates. It does **not** alter accounts, purchases or game runtime modules.
+The first installation uses the Windows installer in [GitHub Releases](https://github.com/ashclient/lunarpatcher/releases). **Subsequent application updates do not require you to download or run setup again.** On installed builds, `electron-updater`:
 
-## Compatibility
+1. Checks GitHub Releases shortly after startup and every six hours while running.
+2. Downloads available updates to its **internal updater cache**, and verifies against release metadata/checksums; no dependency on a file in the user's Downloads folder.
+3. Shows progress on the Updates page. When ready, **Restart to update** silently applies the cached NSIS update and restarts the app. A downloaded update can also install on normal application quit.
 
-The patch engine checks for recognizable ad and home-layout signatures before touching files. Full friends, Quick Play, and the Updates route are verified against the `3.7.31-ow` and `3.7.32-ow` renderer structures in the test fixtures; it refuses unknown layouts. The uploaded `3.7.32-ow` file was already modified by an earlier patch, so the tests reconstruct the earlier changes only inside memory and are not a live Windows launcher test. Always keep original backups.
+If an installer is blocked by Windows, the Updates page reports the error; a manual installer from Releases remains available as a fallback. LunarPatcher updates are **not** automatic Lunar Client launcher patches. Windows installers are currently unsigned, so SmartScreen can warn.
 
 ## Development
 
-Requires Go 1.23+ and Node.js 22+.
+Requirements: Go 1.23+, Node.js 22+, Python 3 with Playwright for visual smoke testing.
 
-```powershell
-cd engine
-go test ./...
-go build -o ..\build\bin\LunarPatcherEngine.exe .
-cd ..
+```bash
+cd engine && go test ./... && cd ..
+node tests/updater_smoke.cjs
+python tests/ui_smoke.py
 npm install
-npm start
-```
-
-To build the Windows NSIS installer:
-
-```powershell
+npm run build:engine:win
 npm run dist:win
 ```
 
-GitHub Actions performs Go tests, JS syntax checks, builds the Go helper and publishes a Windows setup installer when the version changes. The installer includes the helper in Electron `extraResources`.
+The UI smoke script uses mocked IPC APIs and tests initial status, four modes, color isolation, Apply, Restore confirmation, update download/install state, responsive layout, and light/dark presentation. It **does not run Lunar Client itself**. The Node updater smoke test executes the actual Electron main-process update wiring with controlled mocks. GitHub Actions runs these tests before packaging and publishing an NSIS installer with `latest.yml` metadata to the Releases feed.
 
-## Architecture
+## Safety and compatibility
 
-- `engine/`: version-aware ASAR rebuild, Electron integrity-header update, backups, rollback, compatibility checks, offline Go tests.
-- `engine/home_layout.go`: guarded React JSX transforms for friends list, Quick Play, shortcuts and Updates page. Does not replace launch controls.
-- `electron/renderer/`: compact Electron UI with separate Sakura and Custom Color modes.
-- `electron/main.cjs`: secure Electron main process and update events.
-- `.github/workflows/`: Windows CI and release packaging.
+Close Lunar Client before installing or restoring a patch. Keep the verified backups. The 1.2.1 home-tools compatibility fix is preserved in the engine. Support for the user's uploaded 3.7.32 renderer has been tested at source/fixture level, but launcher runtime and silent Windows update installation must be verified on Windows.
 
-The app currently checks its own updates, not Lunar's. Patching should be reapplied after a supported Lunar update.
-
-## 1.2.1 compatibility fix
-
-The home tools insertion now matches the known home composition instead of relying on a fragile exact JSX closing suffix. Layout and themed modes still refuse unknown structures safely; Ads Only does not modify the home layout.
-
-## 1.2.2 layout and Sakura fixes
-
-- Home renderer no longer stacks native **Latest News** above the custom Quick Play/Shortcuts panels. The original news component is displayed only on the dedicated **Updates** route in the supported 3.7.32 renderer, and directly mounted news children are replaced in-place when present.
-- The launcher home uses an explicit two-column grid: independently scrollable center content and a right-side full-height friends list. The original Launch Game and toolbar controls are retained.
-- Sakura has more cohesive dark-rose interiors, readable shortcuts and panels, and a fixed cherry-blossom wallpaper without affecting Custom Color or Clean Layout.
-- The change is tested against the earlier user-supplied 3.7.32 ASAR and additional JSX layout variants. A full live Lunar Client UI check remains necessary because this repository does not include a live Windows launcher environment.
-
-**To apply the fix:** close Lunar Client entirely, install LunarPatcher v1.2.2, then click **Apply changes** again in the desired mode. Patches are rebuilt from validated backups; avoid manually replacing `app.asar` or deleting backup files.
+This is an independent community project and may conflict with Lunar Client's terms. It never handles or requests account credentials.
