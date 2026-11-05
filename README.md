@@ -57,3 +57,12 @@ The app currently checks its own updates, not Lunar's. Patching should be reappl
 ## 1.2.1 compatibility fix
 
 The home tools insertion now matches the known home composition instead of relying on a fragile exact JSX closing suffix. Layout and themed modes still refuse unknown structures safely; Ads Only does not modify the home layout.
+
+## 1.2.2 layout and Sakura fixes
+
+- Home renderer no longer stacks native **Latest News** above the custom Quick Play/Shortcuts panels. The original news component is displayed only on the dedicated **Updates** route in the supported 3.7.32 renderer, and directly mounted news children are replaced in-place when present.
+- The launcher home uses an explicit two-column grid: independently scrollable center content and a right-side full-height friends list. The original Launch Game and toolbar controls are retained.
+- Sakura has more cohesive dark-rose interiors, readable shortcuts and panels, and a fixed cherry-blossom wallpaper without affecting Custom Color or Clean Layout.
+- The change is tested against the earlier user-supplied 3.7.32 ASAR and additional JSX layout variants. A full live Lunar Client UI check remains necessary because this repository does not include a live Windows launcher environment.
+
+**To apply the fix:** close Lunar Client entirely, install LunarPatcher v1.2.2, then click **Apply changes** again in the desired mode. Patches are rebuilt from validated backups; avoid manually replacing `app.asar` or deleting backup files.
