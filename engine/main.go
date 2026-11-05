@@ -7,18 +7,13 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"runtime"
 	"time"
 )
 
-var appVersion = "1.0.0"
+var appVersion = "1.1.0"
 
 func defaultDir() string { return filepath.Join(os.Getenv("LOCALAPPDATA"), "Programs", "Lunar Client") }
 func main() {
-	if runtime.GOOS == "windows" && len(os.Args) == 1 {
-		showGUI()
-		return
-	}
 	dir := flag.String("dir", defaultDir(), "Lunar installation directory")
 	mode := flag.String("mode", "ads", "ads, layout, sakura or color")
 	color := flag.String("color", "#D676A5", "Custom background color, #RRGGBB")
@@ -27,7 +22,18 @@ func main() {
 	checkUpdate := flag.Bool("check-update", false, "check for new LunarPatcher release")
 	downloadUpdate := flag.Bool("download-update", false, "download and verify latest installer")
 	version := flag.Bool("version", false, "print installed application version")
+	status := flag.Bool("status", false, "read launcher version and current patch status")
 	flag.Parse()
+	if *status {
+		v, err := readInstallStatus(*dir)
+		if err != nil {
+			fail(err)
+		}
+		if err := json.NewEncoder(os.Stdout).Encode(v); err != nil {
+			fail(err)
+		}
+		return
+	}
 	if *version {
 		fmt.Println(appVersion)
 		return

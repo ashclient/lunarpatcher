@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -33,7 +34,7 @@ func TestVersionNeutralAndFailClosed(t *testing.T) {
 	if e != nil {
 		t.Fatal(e)
 	}
-	if r.Announcements != "Removed from the homepage" {
+	if r.Announcements != "News-feed component disabled" {
 		t.Fatalf("homepage announcements not removed: %s", r.Announcements)
 	}
 	mainBefore, _ := a.entry("dist/assets/main.js")
@@ -42,8 +43,11 @@ func TestVersionNeutralAndFailClosed(t *testing.T) {
 		t.Fatal(err)
 	}
 	mainAfter, _ := archiveAfter.entry("dist/assets/main.js")
-	if len(mainBefore)-len(mainAfter) < 10 {
-		t.Fatal("expected actual news-feed JSX removal")
+	if len(mainBefore)-len(mainAfter) < 1000 || !bytes.Contains(mainAfter, []byte("eK=()=>null")) {
+		t.Fatal("expected actual blog-post component disabled")
+	}
+	if !bytes.Contains(mainAfter, []byte("onOptionsClick:")) {
+		t.Fatal("must keep launcher settings controls")
 	}
 	if r.Version != "3.7.32-master.15672" {
 		t.Fatalf("wrong new version: %s", r.Version)
@@ -162,5 +166,112 @@ func TestAnnouncementGuard(t *testing.T) {
 	src := []byte("irrelevant component with no supported launch/news structure")
 	if _, err := removeHomeAnnouncements(src); err == nil {
 		t.Fatal("must refuse unrecognized homepage structure")
+	}
+}
+
+// The user supplied a v8.1-patched 3.7.32 archive. Reconstruct the three
+// exact renderer changes only inside this test fixture to exercise current
+// version detection without treating a modified installation as pristine.
+func originalForTest(raw []byte) ([]byte, error) {
+	a, err := parseAsar(raw)
+	if err != nil {
+		return nil, err
+	}
+	html, ok := a.entry("dist/html/main.html")
+	if !ok {
+		return nil, fmt.Errorf("missing html")
+	}
+	ad, ok := a.entry("dist/assets/use-show-ad.js")
+	if !ok {
+		return nil, fmt.Errorf("missing ad")
+	}
+	start := bytes.Index(html, []byte(`<style id="lunar-adaptive-css">/* LUNAR_ADAPTIVE_V8_1 */`))
+	if start < 0 {
+		return nil, fmt.Errorf("not recognized v8.1 fixture")
+	}
+	endrel := bytes.Index(html[start:], []byte(`</style>`))
+	if endrel < 0 {
+		return nil, fmt.Errorf("css end missing")
+	}
+	end := start + endrel + len(`</style>`)
+	originalHTML := append(append([]byte{}, html[:start]...), html[end:]...)
+	guard := []byte(`if(true)return null;/* Lunar Adaptive: no ad slot */`)
+	if bytes.Count(ad, guard) != 1 {
+		return nil, fmt.Errorf("expected single ad guard")
+	}
+	originalAd := bytes.Replace(ad, guard, []byte(`if(!(a&&e.willShowAd))return null;`), 1)
+	return a.rebuild(map[string][]byte{"dist/html/main.html": originalHTML, "dist/assets/use-show-ad.js": originalAd})
+}
+func TestCurrentUploadedLauncher3_7_32(t *testing.T) {
+	patchedRaw, err := os.ReadFile("/mnt/data/app(3).asar")
+	if os.IsNotExist(err) {
+		t.Skip("uploaded latest ASAR unavailable")
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+	raw, err := originalForTest(patchedRaw)
+	if err != nil {
+		t.Fatal(err)
+	}
+	a, err := parseAsar(raw)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := parseVersion(a); got != "3.7.32-ow" {
+		t.Fatalf("unexpected uploaded version: %s", got)
+	}
+	main, _ := a.entry("dist/assets/main.js")
+	for _, mode := range []string{"ads", "layout", "sakura", "color"} {
+		updated, report, err := patchSource(raw, mode, "#E8A3C0")
+		if err != nil {
+			t.Fatalf("%s: %v", mode, err)
+		}
+		if report.Version != "3.7.32-ow" {
+			t.Fatal(report.Version)
+		}
+		b, err := parseAsar(updated)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if mode != "ads" {
+			patched, _ := b.entry("dist/assets/main.js")
+			if bytes.Equal(main, patched) || !bytes.Contains(patched, []byte("kU=()=>null")) {
+				t.Fatalf("%s: news renderer did not change", mode)
+			}
+			if !bytes.Contains(patched, []byte("(0,V.jsx)(aU,{})")) || !bytes.Contains(patched, []byte("(0,V.jsx)(gU,{})")) {
+				t.Fatal("toolbar controls must remain")
+			}
+			if err := os.WriteFile("/mnt/data/lunarpatcher_current_patched_main.mjs", patched, 0600); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+}
+
+// Portable regression test: CI does not include proprietary Lunar archives.
+// Ensures the news transformation targets only the news component and leaves
+// surrounding toolbar functions available.
+func TestNewsGuardPortable(t *testing.T) {
+	prefix := []byte("settingsButton=()=>42,cancelLaunch=()=>33,")
+	news := []byte("kU=()=>{let{t:x}=NU(),v=e=>e.metadata.blogPosts;")
+	news = append(news, []byte(strings.Repeat("a", 500)+"home.latest-news;home_blog_post;home_news;"+strings.Repeat("b", 510))...)
+	tail := []byte("},nextThing=Foo({base:{backgroundOrigin:`border-box`,settings:settingsButton,cancel:cancelLaunch})")
+	source := append(append(append([]byte{}, prefix...), news...), tail...)
+	modified, err := removeHomeAnnouncements(source)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Contains(modified, []byte("kU=()=>null")) {
+		t.Fatal("news component not replaced")
+	}
+	if !bytes.Contains(modified, []byte("settingsButton=()=>42,cancelLaunch=()=>33")) {
+		t.Fatal("launch controls changed")
+	}
+	if !bytes.Contains(modified, []byte("nextThing=Foo")) {
+		t.Fatal("following component changed")
+	}
+	if bytes.Contains(modified, []byte("home_blog_post")) {
+		t.Fatal("news component remains")
 	}
 }

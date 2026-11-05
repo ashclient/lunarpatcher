@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+ <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+ <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: file:; font-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+ <title>LunarPatcher</title>
+ <link rel="stylesheet" href="style.css">
+ <script src="app.js" defer></script>
+</head>
+<body>
+ <div class="app-shell">
+  <aside class="sidebar">
+   <div class="brand">
+     <div class="brand-icon"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 15C7 15 7 8 11 6c4-2 7 3 5 9Zm2 0c-1-8 5-11 8-7 3 4-2 8-8 7Zm-2 2c-8 0-11 7-6 9 5 2 9-3 6-9Zm2 0c0 8 6 11 9 6 2-5-3-8-9-6Z" fill="#F0AFCB"/><circle cx="17" cy="16" r="2.6" fill="#FFF2F7"/></svg></div>
+     <div><strong>LunarPatcher</strong><span>LAUNCHER CUSTOMIZER</span></div>
+   </div>
+   <div class="nav-label">WORKSPACE</div>
+   <nav aria-label="App navigation">
+     <button class="nav-item selected" data-page="home"><svg viewBox="0 0 24 24"><path d="m3 10 9-7 9 7v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 21v-7h6v7"/></svg>Overview</button>
+     <button class="nav-item" data-page="appearance"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 3v18M3 12h18"/><circle cx="12" cy="12" r="3"/></svg>Appearance</button>
+     <button class="nav-item" data-page="updates"><svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14-5L4 8"/><path d="M4 3v5h5M4 13a8 8 0 0 0 14 5l2-2"/><path d="M20 21v-5h-5"/></svg>Updates <span class="nav-dot" id="updateDot" hidden></span></button>
+     <button class="nav-item" data-page="about"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7h.01"/></svg>About</button>
+   </nav>
+   <div class="sidebar-bottom">
+     <div class="sidebar-note"><span class="note-glow"></span><div><strong>Independent project</strong><span>Not affiliated with Lunar Client</span></div></div>
+     <div class="sidebar-version">LunarPatcher <span id="appVersion">v1.1.0</span></div>
+   </div>
+  </aside>
+  <div class="workspace">
+    <header class="topbar">
+      <div class="breadcrumb"><span>LunarPatcher</span><span class="chevron">/</span><strong id="breadcrumbCurrent">Overview</strong></div>
+      <div class="top-actions"><span class="top-connection"><span class="small-dot"></span> LOCAL APPLICATION</span><button id="topGithub" class="icon-button" title="View on GitHub" aria-label="View on GitHub"><svg viewBox="0 0 24 24"><path d="M9 19c-4.3 1.3-4.3-2-6-2.4M15 22v-3.3c0-1 .1-1.5-.5-2.1 3.6-.4 7.5-1.7 7.5-8A6.3 6.3 0 0 0 20.3 4c.2-.5.4-2.1-.3-3-1.5 0-2.7.8-3.4 1.3a12.4 12.4 0 0 0-9.2 0C6.7 1.8 5.5 1 4 1c-.7.9-.5 2.5-.3 3A6.3 6.3 0 0 0 2 8.6c0 6.3 3.9 7.6 7.5 8-.6.6-.5 1.1-.5 2.1V22"/></svg></button></div>
+    </header>
+    <main class="content">
+      <section class="page active" id="page-home">
+        <div class="page-heading"><div><span class="eyebrow">YOUR LAUNCHER, YOUR WAY</span><h1>Make Lunar yours.</h1><p>Keep what matters. Clean up everything else.</p></div><span class="heading-mark"><svg viewBox="0 0 70 70" aria-hidden="true"><path d="M36 12c-9 12-8 18 0 23 7-7 7-15 0-23ZM57 28C43 24 38 29 36 36c10 5 18 2 21-8ZM49 54c0-15-6-19-14-18-2 11 4 18 14 18ZM17 54c14 1 19-7 18-17-11-1-18 7-18 17ZM12 26c-1 13 7 17 22 10-5-10-13-13-22-10Z" stroke="currentColor" stroke-width="1.4" fill="none"/></svg></span></div>
+        <div class="status-card"><div class="status-left"><div class="status-icon"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="m8 12 2.7 2.7L16 9"/></svg></div><div><div class="status-heading">Lunar Client installation</div><div id="installedVersion" class="status-detail">Looking for your launcher…</div></div></div><div class="status-right"><span class="status-pill" id="installStatus"><span class="small-dot"></span>Checking</span><button class="tiny-btn" id="refreshStatus">Refresh</button></div></div>
+        <div class="section-head"><h2>Choose your experience</h2><span>Changes apply to the launcher, not the game.</span></div>
+        <div class="customizer-layout"><div class="mode-list" role="radiogroup" aria-label="Patch mode">
+          <button class="mode-item" data-mode="ads" role="radio" aria-checked="false"><span class="mode-radio"></span><span class="mode-copy"><strong>Ads Only</strong><span>Classic Lunar interface. No ad placements.</span></span><span class="mode-index">01</span></button>
+          <button class="mode-item" data-mode="layout" role="radio" aria-checked="false"><span class="mode-radio"></span><span class="mode-copy"><strong>Clean Layout</strong><span>Declutter the homepage and news feed.</span></span><span class="mode-index">02</span></button>
+          <button class="mode-item selected" data-mode="sakura" role="radio" aria-checked="true"><span class="mode-radio"></span><span class="mode-copy"><strong>Sakura</strong><span>Cherry-blossom wallpaper and rose tones.</span></span><span class="mode-index">03</span></button>
+          <button class="mode-item" data-mode="color" role="radio" aria-checked="false"><span class="mode-radio"></span><span class="mode-copy"><strong>Custom Color</strong><span>Make the entire launcher your color.</span></span><span class="mode-index">04</span></button>
+          <div id="customColorInline" class="inline-color" hidden><div><strong>Accent color</strong><span>Applied to surfaces and backgrounds</span></div><label class="color-picker-inline"><input type="color" id="colorInput" value="#e59cbc" aria-label="Choose custom background color"><span id="colorLabel">#E59CBC</span></label></div>
+        </div>
+        <div class="preview-wrapper"><div class="preview-top"><span>LIVE PREVIEW</span><div class="preview-dots"><i></i><i></i><i></i></div></div><div class="preview-scene mode-sakura" id="previewScene"><div class="preview-window"><div class="preview-nav"><div class="preview-logo"></div><div class="preview-navline wide"></div><div class="preview-navline"></div><div class="preview-navline half"></div><div class="preview-navline"></div></div><div class="preview-main"><div class="preview-hero"><div class="preview-hero-dots">☼</div><div class="preview-launch">LAUNCH</div></div><div class="preview-small"><span></span><span></span></div></div><div class="preview-friends"><div class="preview-navline wide"></div><div class="preview-user"><i></i><span></span></div><div class="preview-user"><i></i><span></span></div><div class="preview-user"><i></i><span></span></div></div></div></div><div class="preview-foot"><div><strong id="previewTitle">Sakura</strong><span id="previewDescription">Soft pink, cherry blossoms, and matching panels.</span></div><span class="preview-label">PREVIEW</span></div></div>
+        </div>
+        <div class="destination"><div class="destination-left"><span class="input-label">INSTALLATION DIRECTORY</span><div class="folder-control"><input spellcheck="false" id="folderInput" type="text" autocomplete="off" placeholder="C:\Users\…\Lunar Client" aria-label="Lunar Client installation directory"><button id="browseFolder">Browse</button></div></div><button class="btn secondary" id="restoreBtn">Restore original</button></div>
+        <div class="action-bar"><div class="action-note"><svg viewBox="0 0 24 24"><path d="M12 2 3 6v6c0 5.3 3.6 8.8 9 10 5.4-1.2 9-4.7 9-10V6z"/><path d="m8.5 12 2.5 2.5 4.5-5"/></svg><div><strong>Safely reversible</strong><span>Original files are backed up before patching.</span></div></div><button class="btn primary" id="applyBtn"><span>Apply changes</span><svg viewBox="0 0 24 24"><path d="M5 12h14m-6-6 6 6-6 6"/></svg></button></div>
+      </section>
+      <section class="page" id="page-appearance"><div class="page-heading compact"><div><span class="eyebrow">PERSONALIZATION</span><h1>Appearance.</h1><p>Choose a look and preview it before applying.</p></div></div><div class="settings-panel"><h2>Theme presets</h2><p class="settings-description">Selecting a preset here changes the same mode used on Overview.</p><div class="preset-tiles"><button class="preset" data-preset="ads"><span class="preset-cover preset-ads"></span><strong>Original</strong><small>Ads Only</small></button><button class="preset" data-preset="layout"><span class="preset-cover preset-layout"></span><strong>Minimal</strong><small>Clean Layout</small></button><button class="preset" data-preset="sakura"><span class="preset-cover preset-sakura"></span><strong>Sakura</strong><small>Cherry blossom</small></button><button class="preset" data-preset="color"><span class="preset-cover preset-custom"></span><strong>Custom</strong><small>Choose any color</small></button></div><div class="settings-divider"></div><div class="settings-line"><div><strong>Custom background</strong><p>Used only when the Custom Color preset is selected.</p></div><label class="big-color"><input type="color" id="colorInputAppearance" value="#e59cbc" aria-label="Custom background color"><span id="colorAppearanceLabel">#E59CBC</span></label></div><div class="settings-actions"><button class="btn primary" id="appearanceApply">Apply selected theme</button></div></div></section>
+      <section class="page" id="page-updates"><div class="page-heading compact"><div><span class="eyebrow">SOFTWARE</span><h1>Updates.</h1><p>New application releases are downloaded securely through GitHub.</p></div></div><div class="settings-panel update-panel"><div class="update-graphic"><svg viewBox="0 0 60 60"><path d="M49 27a20 20 0 0 0-35-11l-6 6m0-13v13h13M11 33a20 20 0 0 0 35 11l6-6m0 13V38H39"/></svg></div><h2 id="updateHeader">Keeping you up to date</h2><p id="updateMessage">LunarPatcher checks for new releases when it starts.</p><div class="progress-track" id="updateProgressOuter" hidden><div id="updateProgress" style="width:0%"></div></div><button class="btn primary" id="checkUpdatesBtn">Check for updates</button><button class="btn primary" id="restartUpdateBtn" hidden>Restart and install</button></div><div class="settings-panel subtle-panel"><h2>How updates work</h2><p>New releases are built on GitHub Actions and published through GitHub Releases. The app downloads available updates, then installs them when you restart.</p><button class="text-link" id="viewReleases">View GitHub repository</button></div></section>
+      <section class="page" id="page-about"><div class="page-heading compact"><div><span class="eyebrow">ABOUT THIS PROJECT</span><h1>LunarPatcher.</h1><p>An independent launcher customization tool.</p></div></div><div class="settings-panel about-panel"><div class="about-logo">✿</div><h2>Built for a cleaner launcher.</h2><p>Remove supported advertisement placements and choose from subtle or expressive launcher themes. All changes are local to your Windows PC.</p><div class="about-details"><div><span>Application</span><strong>LunarPatcher</strong></div><div><span>Version</span><strong id="aboutVersion">1.1.0</strong></div><div><span>Repository</span><strong>ashclient/lunarpatcher</strong></div><div><span>Compatibility</span><strong>Verified renderer structure required</strong></div></div><button class="btn secondary" id="aboutGithub">Open on GitHub</button></div><p class="disclaimer">Unofficial project. Not endorsed by or affiliated with Lunar Client. Launcher updates may invalidate third-party modifications. Modifying Lunar Client.exe may invalidate its digital signature.</p></section>
+    </main>
+    <div class="bottom-status"><span class="system-indicator"></span><span id="operationStatus">Ready</span><button id="showDetailsBtn">View details</button></div>
+  </div>
+ </div>
+ <div class="toast" id="toast" role="status" aria-live="polite" hidden><div class="toast-symbol" id="toastSymbol">✓</div><div><strong id="toastTitle">Success</strong><p id="toastMessage">Updated</p></div><button id="toastClose" aria-label="Dismiss notification">×</button></div>
+ <dialog id="detailsDialog"><div class="dialog-header"><h3>Operation details</h3><button id="closeDialog" aria-label="Close">×</button></div><pre id="detailText">No recent activity.</pre></dialog>
+</body>
+</html>

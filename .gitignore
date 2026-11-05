@@ -1,6 +1,7 @@
-/dist/
-/installer/dist/
-*.exe
+node_modules/
+dist/
+build/bin/
 *.log
-*.test
+.DS_Store
 *.tmp
+*.bak

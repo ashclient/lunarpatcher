@@ -1,10 +1,13 @@
-name: Release Windows Application
+name: Build and publish LunarPatcher for Windows
 on:
   push:
     branches: [main]
   workflow_dispatch:
 permissions:
   contents: write
+concurrency:
+  group: lunarpatcher-release
+  cancel-in-progress: false
 jobs:
   release:
     runs-on: windows-latest
@@ -12,40 +15,53 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
-          go-version-file: go.mod
-      - name: Test source
-        run: go test ./...
-      - name: Build Windows app
+          go-version-file: engine/go.mod
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Go tests
         shell: pwsh
         run: |
-          $version = (Get-Content VERSION -Raw).Trim()
-          if ($version -notmatch '^\d+\.\d+\.\d+$') { throw 'Invalid version in VERSION' }
-          New-Item -ItemType Directory -Force installer/dist | Out-Null
-          go build -ldflags "-H=windowsgui -s -w -X main.appVersion=$version" -o installer/dist/LunarPatcher.exe .
-      - name: Install Inno Setup
-        shell: pwsh
-        run: choco install innosetup -y --no-progress
-      - name: Build installer
+          Set-Location engine
+          go test ./...
+      - name: Build patch engine
         shell: pwsh
         run: |
-          $env:APP_VERSION = (Get-Content VERSION -Raw).Trim()
-          & 'C:\Program Files (x86)\Inno Setup 6\ISCC.exe' 'installer\LunarPatcher.iss'
-      - name: Create checksum
+          New-Item -ItemType Directory -Force build/bin | Out-Null
+          Set-Location engine
+          go build -trimpath -ldflags="-s -w" -o ../build/bin/LunarPatcherEngine.exe .
+      - name: Install Electron dependencies
+        run: npm install --no-audit --no-fund
+      - name: Check UI JavaScript
+        run: npm run test:syntax
+      - name: Package Windows desktop application
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+        run: npm run dist:win
+      - name: Check release package
         shell: pwsh
         run: |
-          $f = 'installer/dist/LunarPatcher_Setup.exe'
-          $hash = (Get-FileHash -Algorithm SHA256 $f).Hash.ToLowerInvariant()
-          "$hash  LunarPatcher_Setup.exe" | Set-Content -Encoding ascii 'installer/dist/LunarPatcher_Setup.exe.sha256'
-      - name: Publish versioned release
+          $version = (Get-Content package.json | ConvertFrom-Json).version
+          $expected = "dist/LunarPatcher_Setup_$version.exe"
+          if (!(Test-Path $expected)) { throw "Missing $expected" }
+          if (!(Test-Path 'dist/latest.yml')) { throw 'Updater metadata latest.yml missing' }
+          Get-FileHash -Algorithm SHA256 $expected | Format-List
+      - name: Publish GitHub release if version is new
         shell: pwsh
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          $version = (Get-Content VERSION -Raw).Trim()
-          $tag = 'v' + $version
-          gh release view $tag --repo "$env:GITHUB_REPOSITORY" *> $null
+          $version = (Get-Content package.json | ConvertFrom-Json).version
+          $tag = "v$version"
+          $repo = $env:GITHUB_REPOSITORY
+          $null = gh release view $tag --repo $repo 2>$null
           if ($LASTEXITCODE -eq 0) {
-            Write-Host "Release $tag already exists; skipping"
+            Write-Host "Existing release $tag; skipping. Bump package.json version for a new release."
             exit 0
           }
-          gh release create $tag 'installer/dist/LunarPatcher_Setup.exe' 'installer/dist/LunarPatcher_Setup.exe.sha256' 'installer/dist/LunarPatcher.exe' --target "$env:GITHUB_SHA" --title "LunarPatcher $tag" --generate-notes --repo "$env:GITHUB_REPOSITORY"
+          $notes = "Electron desktop app with launcher patching, Sakura and Custom Color themes, GitHub updates, and a revised 3.7.32 news component check. Unsigned community build; Windows SmartScreen may warn."
+          $assets = @(Get-ChildItem -Path dist -File | Where-Object { $_.Name -match '^LunarPatcher_Setup_.*\.exe(\.blockmap)?$' -or $_.Name -eq 'latest.yml' } | ForEach-Object { $_.FullName })
+          if (-not ($assets | Where-Object { $_ -like '*.exe' })) { throw 'No setup executable found for release' }
+          if (-not ($assets | Where-Object { $_ -like '*latest.yml' })) { throw 'Missing latest.yml for the updater' }
+          gh release create $tag @assets --target $env:GITHUB_SHA --title "LunarPatcher $tag" --notes $notes --repo $repo
+          if ($LASTEXITCODE -ne 0) { throw 'GitHub release creation failed' }

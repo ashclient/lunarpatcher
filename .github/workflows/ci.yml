@@ -1,21 +1,23 @@
-name: Build and Test
+name: Build checks
 on:
-  push:
-    branches: [main]
   pull_request:
+  workflow_dispatch:
 permissions:
   contents: read
 jobs:
-  test:
+  verify:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
-          go-version-file: go.mod
-      - run: go test ./...
-      - run: go build -ldflags "-H=windowsgui -X main.appVersion=1.0.0" -o LunarPatcher.exe .
-      - uses: actions/upload-artifact@v4
+          go-version-file: engine/go.mod
+      - uses: actions/setup-node@v4
         with:
-          name: LunarPatcher-Windows
-          path: LunarPatcher.exe
+          node-version: '22'
+      - name: Test patch engine
+        run: cd engine; go test ./...
+      - name: Validate Electron code
+        run: npm run test:syntax
+      - name: Build helper executable
+        run: cd engine; go build -trimpath -ldflags="-s -w" -o ../build/bin/LunarPatcherEngine.exe .

@@ -39,11 +39,10 @@ var sakuraWallpaper []byte
 var integrityRecord = regexp.MustCompile(`\[\{"file":"resources\\\\app\.asar","alg":"SHA256","value":"([0-9a-f]{64})"\}\]`)
 var guardPattern = regexp.MustCompile(`if\(!\([\w$]+&&[\w$]+\.willShowAd\)\)return null;`)
 
-// A specific JSX sequence: the empty-props news feed rendered immediately after
-// the launch hero, followed by the right-hand friends column. Identifiers are
-// intentionally version-neutral, while structural and semantic anchors guard
-// against accidentally deleting ordinary launcher controls.
-var homeFeedBoundary = regexp.MustCompile(`,\(0,[A-Za-z_$][\w$]*\.jsx\)\([A-Za-z_$][\w$]*,\{\}\)\]\}\),\(0,[A-Za-z_$][\w$]*\.jsxs\)\([A-Za-z_$][\w$]*,\{css:`)
+// A signature for the standalone news component, not the adjacent Launch
+// toolbar. The previous implementation accidentally matched the Settings icon.
+var newsFunctionStart = regexp.MustCompile(`[A-Za-z_$][\w$]*=\(\)=>\{let\{t:[A-Za-z_$][\w$]*\}=[A-Za-z_$][\w$]*\(\),`)
+var newsFunctionEnd = regexp.MustCompile(`\},[A-Za-z_$][\w$]*=[A-Za-z_$][\w$]*\(\{base:\{backgroundOrigin:\x60border-box\x60`)
 var headTag = regexp.MustCompile(`(?i)</head\s*>`)
 var bodyTag = regexp.MustCompile(`(?i)</body\s*>`)
 var hexColor = regexp.MustCompile(`^#[0-9a-fA-F]{6}$`)
@@ -201,33 +200,47 @@ func parseVersion(a *asarArchive) string {
 	return "unknown"
 }
 
-// removeHomeAnnouncements removes only the homepage feed directly below the
-// Launch button. A mismatch is an error for layout modes, not a silent success.
-// This does not suppress news on other pages or modify the launcher backend.
+// removeHomeAnnouncements disables exactly the blog/news component with
+// metadata.blogPosts and home.latest-news. It must never touch the settings,
+// cancel-launch or friends controls adjacent to the launch button.
 func removeHomeAnnouncements(src []byte) ([]byte, error) {
-	matches := homeFeedBoundary.FindAllIndex(src, -1)
-	valid := make([][2]int, 0, 1)
-	for _, m := range matches {
-		start, end := m[0], m[1]
-		before := src[max(0, start-1000):start]
-		after := src[end:min(len(src), end+2000)]
-		if !bytes.Contains(before, []byte("onOptionsClick:")) ||
-			!bytes.Contains(after, []byte("gridColumn:`span 2`")) ||
-			!bytes.Contains(after, []byte("HomeTopAdOverwolf")) {
-			continue
-		}
-		// Keep the final children/list delimiters intact; remove only the JSX call.
-		callEnd := bytes.Index(src[start:end], []byte("]})"))
-		if callEnd < 0 {
-			continue
-		}
-		valid = append(valid, [2]int{start, start + callEnd})
+	key := []byte("e=>e.metadata.blogPosts")
+	if bytes.Count(src, key) != 1 {
+		return nil, errors.New("news component signature missing or ambiguous; no patch applied")
 	}
-	if len(valid) != 1 {
-		return nil, fmt.Errorf("homepage announcements structure changed (matched %d safe feed boundaries); no patch applied. Supply updated app.asar", len(valid))
+	p := bytes.Index(src, key)
+	lo := max(0, p-260)
+	candidates := newsFunctionStart.FindAllIndex(src[lo:p], -1)
+	if len(candidates) != 1 {
+		return nil, fmt.Errorf("news component start changed (%d candidates)", len(candidates))
 	}
-	span := valid[0]
-	return append(append([]byte{}, src[:span[0]]...), src[span[1]:]...), nil
+	begin := lo + candidates[0][0]
+	hi := min(len(src), p+8000)
+	// The following status-icon component is a stable, unique boundary in
+	// both tested bundles. Anchor against it instead of guessing JSX delimiters.
+	ends := newsFunctionEnd.FindAllIndex(src[p:hi], -1)
+	if len(ends) != 1 {
+		return nil, fmt.Errorf("news component boundary changed (%d candidates)", len(ends))
+	}
+	// Keep the following comma and next variable assignment intact.
+	end := p + ends[0][0] + 1
+	segment := src[begin:end]
+	if !bytes.Contains(segment, []byte("home.latest-news")) ||
+		!bytes.Contains(segment, []byte("home_blog_post")) ||
+		!bytes.Contains(segment, []byte("home_news")) ||
+		len(segment) < 1000 || len(segment) > 7500 {
+		return nil, errors.New("news component safeguards did not match; refusing patch")
+	}
+	lhs := bytes.Index(segment, []byte("=()=>"))
+	if lhs < 1 || lhs > 80 {
+		return nil, errors.New("unexpected news component declaration")
+	}
+	replacement := append(append([]byte{}, segment[:lhs]...), []byte("=()=>null")...)
+	out := make([]byte, 0, len(src)-len(segment)+len(replacement))
+	out = append(out, src[:begin]...)
+	out = append(out, replacement...)
+	out = append(out, src[end:]...)
+	return out, nil
 }
 
 func patchSource(asarBytes []byte, mode, color string) ([]byte, PatchReport, error) {
@@ -291,7 +304,7 @@ func patchSource(asarBytes []byte, mode, color string) ([]byte, PatchReport, err
 			return nil, report, err
 		}
 		changes[mainName] = revised
-		report.Announcements = "Removed from the homepage"
+		report.Announcements = "News-feed component disabled"
 	} else {
 		report.Announcements = "Unchanged in Ads Only mode"
 	}

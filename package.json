@@ -1,0 +1,43 @@
+{
+  "name": "lunarpatcher",
+  "productName": "LunarPatcher",
+  "version": "1.1.0",
+  "description": "Independent desktop customizer for Lunar Client",
+  "author": "ashclient",
+  "license": "MIT",
+  "private": true,
+  "main": "electron/main.cjs",
+  "scripts": {
+    "start": "electron .",
+    "build:engine:win": "go build -trimpath -ldflags=\"-s -w\" -o build/bin/LunarPatcherEngine.exe ./engine",
+    "dist:win": "electron-builder --win nsis --x64 --publish never",
+    "test:syntax": "node --check electron/main.cjs && node --check electron/preload.cjs && node --check electron/renderer/app.js"
+  },
+  "devDependencies": {
+    "electron": "^35.0.0",
+    "electron-builder": "^26.0.12"
+  },
+  "dependencies": {
+    "electron-updater": "^6.6.2"
+  },
+  "build": {
+    "appId": "xyz.ashclient.lunarpatcher",
+    "productName": "LunarPatcher",
+    "directories": {"output": "dist", "buildResources": "build"},
+    "files": ["electron/**/*", "package.json", "!**/*.map"],
+    "extraResources": [{"from": "build/bin/LunarPatcherEngine.exe", "to": "engine/LunarPatcherEngine.exe"}],
+    "win": {"icon": "build/icon.ico", "target": [{"target": "nsis", "arch": ["x64"]}]},
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "perMachine": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "LunarPatcher",
+      "artifactName": "LunarPatcher_Setup_${version}.exe",
+      "deleteAppDataOnUninstall": false,
+      "uninstallDisplayName": "LunarPatcher"
+    },
+    "publish": {"provider": "github", "owner": "ashclient", "repo": "lunarpatcher", "releaseType": "release"}
+  }
+}
