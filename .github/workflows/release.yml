@@ -66,7 +66,7 @@ jobs:
             Write-Host "Existing release $tag; skipping. Bump package.json version for a new release."
             exit 0
           }
-          $notes = "LunarPatcher $version: show real Roblox game artwork from the official thumbnail API, cache thumbnails inside the patched renderer, retain Roblox Hub and React #137 fix. Authenticated actions remain on Roblox.com. Existing clean layout, themes and updater preserved. Unsigned community build; SmartScreen may warn."
+          $notes = "LunarPatcher ${version}: show real Roblox game artwork from the official thumbnail API, cache thumbnails inside the patched renderer, retain Roblox Hub and React #137 fix. Authenticated actions remain on Roblox.com. Existing clean layout, themes and updater preserved. Unsigned community build; SmartScreen may warn."
           $assets = @(Get-ChildItem -Path dist -File | Where-Object { $_.Name -match '^LunarPatcher_Setup_.*\.exe(\.blockmap)?$' -or $_.Name -eq 'latest.yml' } | ForEach-Object { $_.FullName })
           if (-not ($assets | Where-Object { $_ -like '*.exe' })) { throw 'No setup executable found for release' }
           if (-not ($assets | Where-Object { $_ -like '*latest.yml' })) { throw 'Missing latest.yml for the updater' }
