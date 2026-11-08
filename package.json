@@ -1,7 +1,7 @@
 {
   "name": "lunarpatcher",
   "productName": "LunarPatcher",
-  "version": "1.4.2",
+  "version": "1.5.0",
   "description": "Independent desktop customizer for Lunar Client",
   "author": "ashclient",
   "license": "MIT",
@@ -11,9 +11,9 @@
     "start": "electron .",
     "build:engine:win": "cd engine && go build -trimpath -ldflags=\"-s -w\" -o ../build/bin/LunarPatcherEngine.exe .",
     "dist:win": "electron-builder --win nsis --x64 --publish never",
-    "test:syntax": "node --check electron/main.cjs && node --check electron/preload.cjs && node --check electron/renderer/app.js",
+    "test:syntax": "node --check electron/main.cjs && node --check electron/preload.cjs && node --check electron/renderer/app.js && node --check electron/renderer/roblox.js && node --check electron/roblox_launcher.cjs",
     "test:updater": "node tests/updater_smoke.cjs",
-    "test:roblox": "node tests/roblox_widget_smoke.cjs",
+    "test:roblox": "node tests/roblox_widget_smoke.cjs && node tests/roblox_launch_smoke.cjs",
     "test:smoke": "npm run test:syntax && npm run test:updater && npm run test:roblox"
   },
   "devDependencies": {
@@ -26,6 +26,7 @@
   "build": {
     "appId": "xyz.ashclient.lunarpatcher",
     "productName": "LunarPatcher",
+    "protocols": [{"name":"LunarPatcher Roblox game launch", "schemes":["lunarpatcher"]}],
     "directories": {
       "output": "dist",
       "buildResources": "build"

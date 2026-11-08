@@ -14,6 +14,10 @@ contextBridge.exposeInMainWorld('lunarPatcher', Object.freeze({
   installUpdate: () => ipcRenderer.invoke('updates:install'),
   openRepository: () => ipcRenderer.invoke('app:repo'),
   launchLunar: (folder) => ipcRenderer.invoke('app:launch', folder),
+  robloxStatus: () => ipcRenderer.invoke('roblox:status'),
+  robloxPreferences: () => ipcRenderer.invoke('roblox:prefs-read'),
+  saveRobloxPreferences: (prefs) => ipcRenderer.invoke('roblox:prefs-save', prefs),
+  launchRoblox: (request) => ipcRenderer.invoke('roblox:launch', request),
   onUpdate: (callback) => {
     if (typeof callback !== 'function') return () => {};
     const listener = (_event, payload) => callback(payload);

@@ -33,9 +33,26 @@ Roblox website pages cannot simply be cloned into an iframe: framing and authent
 
 **Regression checks:** a test traverses rendered React element trees for void-element children (the exact cause of #137), then tests all eight hub pages, game launch links, saving, private invitations, account bookmarks and settings. A browser visual smoke test checks each page. Both known Lunar renderer fixtures undergo patch/parse validation. Live Windows launch inside Lunar remains unverified.
 
+## Roblox desktop launcher (v1.5.0)
+
+The **Roblox** page in LunarPatcher now sends a validated game request to Windows using the officially registered `roblox://experiences/start?placeId=...` protocol. It is **not** just a link from the Lunar renderer:
+
+- Detects Roblox/Roblox Player Windows protocol handlers and installed client files.
+- Opens Roblox Player itself using `roblox-player:1+launchmode:app` when registered.
+- Accepts Roblox experience links or numeric place IDs, private-server invitations, and an explicit browser launch mode.
+- If a direct protocol is unavailable or rejected, opens the **official Roblox game page** and reports the fallback.
+- Stores up to 40 saved experiences and 16 recent *launch requests*, with no credentials or cookies.
+- Includes launch diagnostics, a live result log, and a safe local URL validation layer.
+- Supports Compact, Comfortable, and Spacious hub layouts, an accent color, confirmation, and history settings.
+- Adds a restricted `lunarpatcher://launch?placeId=...` Windows protocol so the optional in-Lunar Roblox page can hand a game to the desktop launcher. Depending on Lunar's external-link policy this handoff may be blocked; direct Roblox links and the browser remain fallback options.
+
+**FPS and graphics:** Roblox's supported Windows client settings include an in-game maximum frame rate up to 240 FPS. The FPS selector in LunarPatcher is a **preference/reminder**, not an FPS unlocker: it cannot forcibly change Roblox's in-game FPS limit or exceed it. Graphics quality, performance stats (Shift+F5) and fullscreen are configured inside Roblox. The app does not patch Roblox FastFlags, anti-cheat, account sessions, or binaries. Multiple simultaneous Roblox instances are not promised.
+
+**Limit of testing:** Windows protocol handoff and fallback behavior pass mock tests. The Electron UI passes a Chromium smoke test, and the Go engine passes tests for known 3.7.31/3.7.32 renderer patterns. Windows actually joining a Roblox game requires real-device confirmation; a successful OS handoff alone does not prove the game session started.
+
 ## Desktop application
 
-The Electron UI is organized like Windows Settings: Appearance, Updates, and About. It follows Windows light/dark system preference and keeps Apply/Restore accessible in a persistent action bar. It uses a secure preload bridge with `contextIsolation`, sandboxing, and a restrictive content security policy.
+The Electron UI is organized like Windows Settings: Appearance, Roblox, Updates, and About. It follows Windows light/dark system preference and keeps Apply/Restore accessible in a persistent action bar. It uses a secure preload bridge with `contextIsolation`, sandboxing, and a restrictive content security policy.
 
 ### In-app auto-updates (no Downloads folder)
 
@@ -54,7 +71,9 @@ Requirements: Go 1.23+, Node.js 22+, Python 3 with Playwright for visual smoke t
 ```bash
 cd engine && go test ./... && cd ..
 node tests/updater_smoke.cjs
+node tests/roblox_launch_smoke.cjs
 python tests/ui_smoke.py
+python tests/roblox_desktop_ui_smoke.py
 npm install
 npm run build:engine:win
 npm run dist:win

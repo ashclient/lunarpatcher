@@ -7,6 +7,7 @@
   <title>LunarPatcher</title>
   <link rel="stylesheet" href="style.css">
   <script src="app.js" defer></script>
+  <script src="roblox.js" defer></script>
 </head>
 <body>
 <div class="shell">
@@ -19,6 +20,7 @@
       <button type="button" class="nav-item current" data-view="appearance" aria-current="page">
         <svg aria-hidden="true" viewBox="0 0 24 24"><path d="m4 16 11-11a2.12 2.12 0 0 1 3 3L7 19l-4 1zM14 6l4 4"/></svg>Appearance
       </button>
+      <button type="button" class="nav-item" data-view="roblox"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M7.56 1.15 22.85 7.56 16.44 22.85 1.15 16.44 7.56 1.15ZM10.23 8.45 8.45 13.77 13.77 15.55 15.55 10.23 10.23 8.45Z" fill="currentColor" stroke="none"/></svg>Roblox</button>
       <button type="button" class="nav-item" data-view="updates">
         <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M20 12a8 8 0 0 1-14 5l-2-2v5h5M4 12a8 8 0 0 1 14-5l2 2V4h-5"/></svg>Updates<span class="nav-indicator" id="updateIndicator" hidden></span>
       </button>
@@ -71,6 +73,64 @@
         </div>
 
         
+      </section>
+
+      <section class="page" id="robloxPage" aria-labelledby="robloxTitle" hidden>
+        <div class="page-heading"><div><h1 id="robloxTitle">Roblox launcher</h1><p>Launch games with the installed Roblox Player, manage your library, and customize the hub.</p></div><span id="robloxHealth" class="state-tag">Checking player…</span></div>
+        <div class="roblox-dashboard-head">
+          <div><span class="roblox-eyebrow">QUICK LAUNCH</span><h2>Play your next experience</h2><p>Uses the official Windows Roblox protocol; falls back to the Roblox website when unavailable.</p></div>
+          <button type="button" id="openRobloxApp" class="button primary">Open Roblox Player</button>
+        </div>
+        <form id="robloxLaunchForm" class="roblox-launch-form"><label for="robloxTarget">Game link or place ID</label><div class="roblox-launch-controls"><input id="robloxTarget" type="text" autocomplete="off" spellcheck="false" placeholder="https://www.roblox.com/games/... or place ID"><button type="submit" class="button primary">Launch game</button><button type="button" class="button subtle" id="robloxSaveGame">Save</button></div></form>
+        <p class="roblox-notice" id="robloxNotice" role="status" aria-live="polite">Game launching is handled by Windows and Roblox Player, not the Lunar renderer.</p>
+        <div class="roblox-tabs" role="tablist" aria-label="Roblox controls">
+          <button type="button" role="tab" class="active" aria-selected="true" data-roblox-panel="games">Games</button>
+          <button type="button" role="tab" aria-selected="false" data-roblox-panel="performance">Performance</button>
+          <button type="button" role="tab" aria-selected="false" data-roblox-panel="customize">Customize hub</button>
+          <button type="button" role="tab" aria-selected="false" data-roblox-panel="diagnostics">Diagnostics</button>
+        </div>
+        <div id="robloxGames" class="roblox-subpage">
+          <div class="roblox-subheading"><h2>Saved experiences</h2><span>Stored locally; no Roblox credentials</span></div><div id="robloxFavorites" class="roblox-list"></div>
+          <div class="roblox-subheading"><h2>Quick access</h2><span>Launch directly with Windows</span></div>
+          <div class="roblox-shortcuts" id="robloxSuggestions">
+            <button type="button" data-roblox-place="2753915549">Blox Fruits<span>Adventure</span></button>
+            <button type="button" data-roblox-place="6516141723">DOORS<span>Horror</span></button>
+            <button type="button" data-roblox-place="4924922222">Brookhaven RP<span>Roleplay</span></button>
+            <button type="button" data-roblox-place="17625359962">RIVALS<span>Action</span></button>
+          </div>
+          <div class="roblox-subheading"><h2>Recent requests</h2><span>Launch requests, not confirmed play sessions</span></div><div id="robloxRecent" class="roblox-list"></div>
+        </div>
+        <div id="robloxPerformance" class="roblox-subpage" hidden>
+          <div class="roblox-settings-card"><h2>Frame rate</h2><p>Roblox now has its own supported maximum frame-rate control (up to 240 FPS on Windows). This selector is a reminder for the target you want to use; it does <strong>not</strong> bypass the client’s cap or write unsupported FastFlags.</p>
+            <div class="roblox-setting-row"><label for="robloxFps">Preferred maximum FPS</label><select id="robloxFps"><option value="default">Roblox default</option><option value="60">60 FPS</option><option value="120">120 FPS</option><option value="144">144 FPS</option><option value="240">240 FPS</option></select></div>
+            <p id="robloxFpsGuide" class="roblox-inline-help">In Roblox: Escape → Settings → Maximum Frame Rate → choose the value above.</p>
+            <button type="button" class="button subtle" id="robloxOpenSettings">Open Roblox to adjust FPS</button>
+          </div>
+          <div class="roblox-settings-card"><h2>Graphics and performance</h2><p>Roblox graphics quality and fullscreen behavior are controlled inside Roblox. These shortcuts open the player and explain where to configure them without fragile client modifications.</p>
+            <div class="roblox-info-grid"><div><strong>Graphics quality</strong><span>Escape → Settings → Graphics Mode: Manual, then choose quality.</span></div><div><strong>Performance stats</strong><span>Press Shift + F5 inside a game to view live performance.</span></div><div><strong>Fullscreen</strong><span>Use Roblox's fullscreen setting; exclusive fullscreen may be platform-dependent.</span></div><div><strong>Unsupported FastFlags</strong><span>Not written, injected, or advertised as an FPS unlocker.</span></div></div>
+          </div>
+        </div>
+        <div id="robloxCustomize" class="roblox-subpage" hidden>
+          <div class="roblox-settings-card"><h2>Roblox Hub layout</h2><p>Controls the Roblox page integrated into Lunar, not Roblox's protected in-game interface. Reapply the Lunar patch to update its base styling when necessary.</p>
+            <div class="roblox-setting-row"><label for="robloxLayout">Layout density</label><select id="robloxLayout"><option value="comfortable">Comfortable</option><option value="compact">Compact</option><option value="spacious">Spacious</option></select></div>
+            <div class="roblox-setting-row"><label for="robloxAccent">Accent color</label><input type="color" id="robloxAccent" value="#e5a1bb"></div>
+            <div id="robloxLayoutPreview" class="roblox-layout-preview"><div class="preview-bar"></div><div class="preview-cards"><span></span><span></span><span></span></div></div>
+            <label class="roblox-check"><input id="robloxShowDetails" type="checkbox" checked> Show extra game details in the launcher</label>
+            <label class="roblox-check"><input id="robloxKeepHistory" type="checkbox" checked> Remember recent launch requests</label>
+            <label class="roblox-check"><input id="robloxConfirmLaunch" type="checkbox"> Confirm before launching a game</label>
+          </div>
+          <div class="roblox-settings-card"><h2>Launch behavior</h2><div class="roblox-setting-row"><label for="robloxMode">Default launch method</label><select id="robloxMode"><option value="direct">Direct via Roblox protocol</option><option value="browser">Official Roblox website</option></select></div><p>Direct launch uses Windows' registered Roblox handler. If it is missing or rejects the link, the official Roblox website opens instead.</p></div>
+        </div>
+        <div id="robloxDiagnostics" class="roblox-subpage" hidden>
+          <div class="roblox-settings-card"><div class="roblox-subheading"><h2>Installation diagnostics</h2><button type="button" class="button subtle" id="robloxRecheck">Recheck</button></div>
+            <div class="roblox-diagnostic"><span>Windows game protocol</span><strong id="rbProtocol">Checking…</strong></div>
+            <div class="roblox-diagnostic"><span>Roblox Player app protocol</span><strong id="rbPlayerProtocol">Checking…</strong></div>
+            <div class="roblox-diagnostic"><span>Installed executable</span><strong id="rbExe">Checking…</strong></div>
+            <p id="rbReason" class="roblox-inline-help"></p>
+            <div class="roblox-button-row"><button type="button" class="button subtle" id="robloxTestLaunch">Test opening Roblox app</button><button type="button" class="button subtle" id="robloxWebsite">Roblox website</button></div>
+          </div>
+          <div class="roblox-settings-card"><h2>Launch activity</h2><p>Windows accepting a protocol request does not guarantee a Roblox game session started. The log below records what the operating system accepted.</p><pre id="robloxLaunchLog" class="roblox-log">No launch requests yet.</pre></div>
+        </div>
       </section>
 
       <section class="page" id="updatesPage" aria-labelledby="updatesTitle" hidden>

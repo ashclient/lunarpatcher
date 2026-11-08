@@ -22,7 +22,7 @@ lunarPatcherRobloxPage=()=>{
   {id:`189707`,name:`Natural Disaster Survival`,genre:`Survival`,subtitle:`Survive the unexpected`,art:`disaster`},
   {id:`17625359962`,name:`RIVALS`,genre:`Action`,subtitle:`Fast-paced competition`,art:`rivals`}
  ];
- const DEFAULT={launchMode:`direct`,fallback:true,confirm:false,showPopular:true,keepHistory:true};
+ const DEFAULT={launchMode:`desktop`,fallback:true,confirm:false,showPopular:true,keepHistory:true,hubLayout:`comfortable`,hubColor:`#E5A1BB`,fpsTarget:`default`,reduceMotion:false};
  const [page,setPage]=(0,__REACT__.useState)(`home`);
  const [query,setQuery]=(0,__REACT__.useState)(``);
  const [category,setCategory]=(0,__REACT__.useState)(`All`);
@@ -62,7 +62,18 @@ lunarPatcherRobloxPage=()=>{
   if(settings.keepHistory)persist(`recent.v1`,[{id,name:titleFor(id)},...recent.filter(g=>g.id!==id)].slice(0,16),setRecent);
   if(settings.launchMode===`website`){setNotice(`Opening game page on Roblox.`);browse(gameUrl(id));return}
   setNotice(`Opening ${titleFor(id)} in Roblox Player…`);
-  Promise.resolve().then(()=>external(`roblox://experiences/start?placeId=${id}`)).then(result=>{if(result===false){if(settings.fallback)browse(gameUrl(id));else setNotice(`Roblox Player didn't accept the request.`)}}).catch(()=>{if(settings.fallback)browse(gameUrl(id));else setNotice(`Could not open Roblox Player.`)});
+  const desktop=`lunarpatcher://launch?placeId=${id}`;
+  const direct=`roblox://experiences/start?placeId=${id}`;
+  // Lunar's external-link bridge can reject custom schemes. Try the next supported
+  // handler only on explicit failure; never fire two accepted launches at once.
+  const urls=settings.launchMode===`desktop`?[desktop,direct]:[direct];
+  const tryLaunch=async index=>{
+   if(index>=urls.length){if(settings.fallback)return browse(gameUrl(id));setNotice(`Could not hand the request to Windows. Open Roblox through your browser.`);return}
+   try{const result=await external(urls[index]);if(result===false)throw Error(`Link rejected`);
+    setNotice(`Launch link sent to Windows. If Roblox didn't open, try the Roblox website or the LunarPatcher desktop app.`);
+   }catch(e){return tryLaunch(index+1)}
+  };
+  void tryLaunch(0);
  };
  const saveGame=g=>{
   if(!g||!validId(g.id))return;
@@ -125,11 +136,25 @@ lunarPatcherRobloxPage=()=>{
    h(`p`,{className:`lpr-muted`},`No saved profiles yet.`)));
  const switchRow=(title,desc,value,set)=>h(`label`,{className:`lpr-setting`},h(`span`,{},h(`strong`,{},title),h(`small`,{},desc)),h(`input`,{type:`checkbox`,checked:value,onChange:e=>set(e.target.checked)}));
  const settingsPage=h(`div`,{className:`lpr-content`},h(`div`,{className:`lpr-heading`},h(`div`,{},h(`h1`,{},`Settings`),h(`p`,{},`Roblox launch preferences and local storage.`))),
-  h(`section`,{className:`lpr-panel`},h(`h2`,{},`Launching`),h(`label`,{className:`lpr-setting`},h(`span`,{},h(`strong`,{},`Launch method`),h(`small`,{},`Use the installed Roblox Player or view the game on Roblox.com.`)),h(`select`,{value:settings.launchMode,onChange:e=>updateSetting(`launchMode`,e.target.value)},h(`option`,{value:`direct`},`Roblox Player`),h(`option`,{value:`website`},`Roblox website`))),
+  h(`section`,{className:`lpr-panel`},h(`h2`,{},`Launching`),h(`label`,{className:`lpr-setting`},h(`span`,{},h(`strong`,{},`Launch method`),h(`small`,{},`Use the installed Roblox Player or view the game on Roblox.com.`)),h(`select`,{value:settings.launchMode,onChange:e=>updateSetting(`launchMode`,e.target.value)},h(`option`,{value:`desktop`},`LunarPatcher desktop handler (recommended)`),h(`option`,{value:`direct`},`Roblox protocol handler`),h(`option`,{value:`website`},`Roblox website`))),
    switchRow(`Fallback to browser`,`Open the game website if direct launching fails.`,!!settings.fallback,v=>updateSetting(`fallback`,v)),
    switchRow(`Confirm before playing`,`Show a confirmation prompt first.`,!!settings.confirm,v=>updateSetting(`confirm`,v))),
+  h(`section`,{className:`lpr-panel`},h(`h2`,{},`Performance`),
+   h(`p`,{},`Preferred FPS is a reminder only. Apply it inside Roblox: Escape → Settings → Maximum Frame Rate.`),
+   h(`label`,{className:`lpr-setting`},h(`span`,{},h(`strong`,{},`Preferred maximum FPS`),h(`small`,{},`Roblox in-game setting; no unsupported FPS unlocker.`)),
+    h(`select`,{value:settings.fpsTarget||`default`,onChange:e=>updateSetting(`fpsTarget`,e.target.value)},
+     ...[`default`,`60`,`120`,`144`,`240`].map(v=>h(`option`,{value:v,key:v},v===`default`?`Roblox default`:`${v} FPS`)))),
+   h(`p`,{},`To display Roblox performance statistics, press Shift + F5 while playing. Use Roblox's Graphics Mode and Fullscreen controls for graphical tuning.`)),
+  h(`section`,{className:`lpr-panel`},h(`h2`,{},`Hub appearance`),
+   h(`p`,{},`These settings customize the Roblox page inside Lunar, not the game's protected in-game GUI.`),
+   h(`label`,{className:`lpr-setting`},h(`span`,{},h(`strong`,{},`Layout density`),h(`small`,{},`Control spacing and card sizes.`)),
+    h(`select`,{value:settings.hubLayout||`comfortable`,onChange:e=>updateSetting(`hubLayout`,e.target.value)},
+     ...[`compact`,`comfortable`,`spacious`].map(v=>h(`option`,{value:v,key:v},v[0].toUpperCase()+v.slice(1))))),
+   h(`label`,{className:`lpr-setting`},h(`span`,{},h(`strong`,{},`Hub accent color`),h(`small`,{},`Independent of LunarPatcher's Sakura theme.`)),
+    h(`input`,{type:`color`,value:/^#[0-9a-f]{6}$/i.test(settings.hubColor||``)?settings.hubColor:`#E5A1BB`,onChange:e=>updateSetting(`hubColor`,e.target.value)})),
+   switchRow(`Reduce animations`,`Use more subtle transitions in the Roblox hub.`,!!settings.reduceMotion,v=>updateSetting(`reduceMotion`,v))),
   h(`section`,{className:`lpr-panel`},h(`h2`,{},`Library`),switchRow(`Show suggested experiences`,`Display a curated selection on Home.`,!!settings.showPopular,v=>updateSetting(`showPopular`,v)),switchRow(`Save recent games`,`Only place IDs and names are stored locally.`,!!settings.keepHistory,v=>updateSetting(`keepHistory`,v))),
-  h(`section`,{className:`lpr-panel`},h(`h2`,{},`Roblox Player`),h(`p`,{},`Graphics, FPS, volume, and controls are configured in Roblox. This integration does not change Roblox client files.`),
+  h(`section`,{className:`lpr-panel`},h(`h2`,{},`Roblox Player`),h(`p`,{},`Roblox supports an in-game maximum FPS setting up to 240 on Windows. This hub doesn't bypass Roblox's restrictions or modify Roblox client files.`),
    h(`div`,{className:`lpr-button-row`},btn(`Install Roblox ↗`,()=>browse(`https://www.roblox.com/download`)),btn(`Account settings ↗`,()=>browse(`https://www.roblox.com/my/account`)),btn(`Support ↗`,()=>browse(`https://en.help.roblox.com/`)))));
  const activeGame=detail&&validId(detail.id)?detail:null;
  const details=activeGame?h(`div`,{className:`lpr-detail`},
@@ -145,7 +170,7 @@ lunarPatcherRobloxPage=()=>{
   h(`form`,{className:`lpr-search`,onSubmit:e=>{e.preventDefault();navTo(`discover`)}},h(`span`,{},`⌕`),h(`input`,{type:`search`,value:query,onChange:e=>setQuery(e.target.value.slice(0,90)),placeholder:`Search experiences`,"aria-label":`Search Roblox experiences`}),btn(`Search`,()=>navTo(`discover`),`primary`)),
   btn(`Open Roblox ↗`,()=>browse(`https://www.roblox.com/home`)));
  const navigation=h(`nav`,{className:`lpr-navigation`,"aria-label":`Roblox sections`},...items.map(([id,label])=>h(`button`,{type:`button`,className:`lpr-nav-item ${page===id?`is-active`:``}`,onClick:()=>navTo(id),"aria-label":label,"aria-current":page===id?`page`:void 0,key:id},h(`span`,{className:`lpr-nav-icon`},icon(id)),label)));
- return h(`main`,{className:`lunar-patcher-roblox`},header,navigation,
+ return h(`main`,{className:`lunar-patcher-roblox lpr-density-${[`compact`,`comfortable`,`spacious`].includes(settings.hubLayout)?settings.hubLayout:`comfortable`} ${settings.reduceMotion?`lpr-reduced-motion`:``}`,style:{"--lpr-custom-accent":/^#[0-9a-f]{6}$/i.test(settings.hubColor||``)?settings.hubColor:`#E5A1BB`}},header,navigation,
   h(`div`,{className:`lpr-scroll`},details||({home,discover,library,friends,avatar,marketplace,accounts:accountsPage,settings:settingsPage}[page]||home)),
   h(`div`,{className:`lpr-status`,role:`status`},notice||`Launches through the official Roblox Player. Account features use Roblox.com.`));
 },

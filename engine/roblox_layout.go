@@ -183,6 +183,15 @@ const robloxCSS = `
 #root .lpr-detail-info h1{font-size:29px;margin:2px 0 7px}
 #root .lpr-detail-info p{margin:0 0 6px;color:#b0bcc9}
 #root .lpr-detail-info small{color:#8894a7}
+#root .lunar-patcher-roblox .lpr-primary{background:var(--lpr-custom-accent,#E5A1BB);border-color:var(--lpr-custom-accent,#E5A1BB);color:#18111a}
+#root .lunar-patcher-roblox .lpr-nav-item.is-active{box-shadow:inset 0 -2px var(--lpr-custom-accent,#E5A1BB)}
+#root .lunar-patcher-roblox .lpr-setting input[type=color]{flex:0 0 60px;height:36px;padding:4px;border:1px solid rgba(255,255,255,.15);border-radius:7px;background:#11151d;cursor:pointer}
+#root .lpr-density-compact .lpr-content,#root .lpr-density-compact .lpr-detail{gap:14px;padding:18px 23px}
+#root .lpr-density-compact .lpr-game-grid{gap:9px}
+#root .lpr-density-compact .lpr-panel{padding:12px 14px}
+#root .lpr-density-spacious .lpr-content,#root .lpr-density-spacious .lpr-detail{gap:35px;padding:36px 42px}
+#root .lpr-density-spacious .lpr-game-grid{gap:24px}
+#root .lpr-reduced-motion *{transition-duration:.01ms!important;animation-duration:.01ms!important}
 #root .lpr-status{padding:11px 24px;font-size:11px;color:#9da8b8;border-top:1px solid rgba(255,255,255,.08);min-height:36px;flex-shrink:0}
 @media(max-width:1150px){#root .lpr-game-grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
 @media(max-width:900px){#root .lpr-game-grid{grid-template-columns:repeat(3,minmax(0,1fr))}#root .lpr-topbar{gap:10px;padding:12px}#root .lpr-navigation{padding:7px 12px}}

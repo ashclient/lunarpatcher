@@ -5,6 +5,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const os = require('node:os');
 const {autoUpdater} = require('electron-updater');
+const {diagnose:diagnoseRoblox, launchRoblox, cleanPrefs:cleanRobloxPrefs,parseDesktopLink}=require('./roblox_launcher.cjs');
 const REPO = 'https://github.com/ashclient/lunarpatcher';
 const DEFAULT_FOLDER = path.join(process.env.LOCALAPPDATA || path.join(os.homedir(), 'AppData', 'Local'), 'Programs', 'Lunar Client');
 const VALID_MODES = new Set(['ads','layout','sakura','color']);
@@ -15,6 +16,22 @@ let readyToInstall = false;
 let updateCheckInFlight = false;
 let updateState = {phase:'idle', message:'Updates are checked automatically'};
 
+// Registered desktop-link handoff from the optional in-Lunar Roblox page.
+// Requests are intentionally restricted to numeric game IDs.
+function incomingDesktopLink(argv){return (argv||[]).map(parseDesktopLink).find(Boolean)||null;}
+async function handoffDesktopLink(argv){
+  const request=incomingDesktopLink(argv);
+  if(!request)return false;
+  try{const outcome=await launchRoblox(request,{shell});
+    if(win&&!win.isDestroyed())win.webContents.send('roblox:handoff',outcome);
+  }catch(e){if(win&&!win.isDestroyed())win.webContents.send('roblox:handoff',{error:String(e?.message||e)});}
+  return true;
+}
+if(!app.requestSingleInstanceLock())app.quit();
+else app.on('second-instance',(_event,argv)=>{
+  if(win&&!win.isDestroyed()){win.show();win.focus();}
+  if(app.isReady())void handoffDesktopLink(argv);
+});
 function prefsPath() { return path.join(app.getPath('userData'), 'preferences.json'); }
 function getPreferences() {
   try {
@@ -35,6 +52,9 @@ function savePreferences(p) {
   fs.writeFileSync(prefsPath(), JSON.stringify(clean,null,2),{encoding:'utf8',mode:0o600});
   return clean;
 }
+function robloxPrefsPath(){return path.join(app.getPath('userData'),'roblox-preferences.json');}
+function getRobloxPreferences(){try{return cleanRobloxPrefs(JSON.parse(fs.readFileSync(robloxPrefsPath(),'utf8')))}catch{return cleanRobloxPrefs({})}}
+function saveRobloxPreferences(v){const p=cleanRobloxPrefs(v);fs.mkdirSync(path.dirname(robloxPrefsPath()),{recursive:true});fs.writeFileSync(robloxPrefsPath(),JSON.stringify(p,null,2),{encoding:'utf8',mode:0o600});return p;}
 function appUpdate(state) {
   updateState={...updateState,...state};
   if(win && !win.isDestroyed()) win.webContents.send('updates:status',updateState);
@@ -88,7 +108,9 @@ async function checkForUpdates() {
   }
 }
 app.whenReady().then(()=>{
+  if(process.platform==='win32'&&app.isPackaged)app.setAsDefaultProtocolClient('lunarpatcher');
   createWindow();
+  if(incomingDesktopLink(process.argv))setTimeout(()=>void handoffDesktopLink(process.argv),800);
   ipcMain.handle('app:info',()=>({version:app.getVersion(),platform:process.platform,repository:REPO,update:updateState,defaultFolder:DEFAULT_FOLDER}));
   ipcMain.handle('prefs:read',()=>getPreferences());
   ipcMain.handle('prefs:save',(_event,prefs)=>savePreferences(prefs));
@@ -97,6 +119,16 @@ app.whenReady().then(()=>{
     return res.canceled?null:res.filePaths[0];
   });
   ipcMain.handle('app:repo',()=>shell.openExternal(REPO));
+  ipcMain.handle('roblox:status',()=>diagnoseRoblox());
+  ipcMain.handle('roblox:prefs-read',()=>getRobloxPreferences());
+  ipcMain.handle('roblox:prefs-save',(_event,prefs)=>saveRobloxPreferences(prefs));
+  ipcMain.handle('roblox:launch',async(_event,request)=>{
+    const prefs=getRobloxPreferences();
+    // Validate the target before allowing any OS-level URL handoff.
+    const result=await launchRoblox({target:request?.target,app:request?.app===true,mode:request?.mode||prefs.launchMode},{shell});
+    return result;
+  });
+
   ipcMain.handle('app:launch',async(_event,folder)=>{
     const lunarExe=path.join(asFolder(folder),'Lunar Client.exe');
     if(!fs.existsSync(lunarExe)) throw new Error('Lunar Client.exe was not found in that directory');

@@ -12,15 +12,15 @@ const friendlyError = e => String(e?.message || e || 'Unknown error').replace(/^
 function showMessage(text,kind='') { const el=$('actionMessage');el.textContent=text;el.className='action-copy'+(kind?' '+kind:''); }
 function persist() { if(api) api.savePreferences({folder:state.folder,mode:state.mode,color:state.color,robloxEnabled:state.robloxEnabled}).catch(()=>{}); }
 function showView(view) {
-  if(!['appearance','updates','about'].includes(view))return;
+  if(!['appearance','roblox','updates','about'].includes(view))return;
   document.querySelectorAll('.nav-item[data-view]').forEach(button=>{
     const active=button.dataset.view===view;
     button.classList.toggle('current',active);
     if(active)button.setAttribute('aria-current','page');else button.removeAttribute('aria-current');
   });
-  for(const name of ['appearance','updates','about'])$(name+'Page').hidden=name!==view;
+  for(const name of ['appearance','roblox','updates','about'])$(name+'Page').hidden=name!==view;
   $('actionBar').hidden=view!=='appearance';
-  $('topbarTitle').textContent={appearance:'Appearance',updates:'Updates',about:'About'}[view];
+  $('topbarTitle').textContent={appearance:'Appearance',roblox:'Roblox',updates:'Updates',about:'About'}[view];
   $('viewport').scrollTop=0;
 }
 function chooseMode(mode) {

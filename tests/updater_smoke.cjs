@@ -22,8 +22,10 @@ app.isPackaged=true;
 app.whenReady=()=>Promise.resolve();
 app.getVersion=()=> '1.3.0';
 app.getPath=() => '/tmp/lunarpatcher-test';
+app.requestSingleInstanceLock=()=>true;
+app.setAsDefaultProtocolClient=()=>true;
 const electron={app,BrowserWindow:MockWindow,ipcMain:{handle:(key,handler)=>handlers.set(key,handler)},dialog:{},shell:{}};
-const fakeRequire=id=>id==='electron'?electron:id==='electron-updater'?{autoUpdater:updater}:require(id);
+const fakeRequire=id=>id==='electron'?electron:id==='electron-updater'?{autoUpdater:updater}:id==='./roblox_launcher.cjs'?require(path.join(__dirname,'../electron/roblox_launcher.cjs')):require(id);
 const context={require:fakeRequire,__dirname:path.join(__dirname,'../electron'),module:{exports:{}},exports:{},process,console,Buffer,setTimeout:(fn,delay)=>{timers.push({fn,delay});return {unref(){}}},setInterval:(fn,delay)=>{timers.push({fn,delay});return {unref(){}}}};
 vm.runInNewContext(source,context,{filename:'electron/main.cjs'});
 (async()=>{
