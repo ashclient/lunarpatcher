@@ -11,17 +11,22 @@ An independent Windows desktop app for adjusting the **Lunar Client launcher**. 
 
 The patch engine uses guarded renderer transforms and refuses unrecognized layout structures rather than rewriting an incompatible launcher. Backups and restoration are verified. Launcher updates may require a new patch engine. The original Lunar executable's digital signature is invalidated when patched.
 
-## Optional Roblox tab (Windows)
+## Optional Roblox Hub (Windows)
 
-LunarPatcher has an **off-by-default Roblox sidebar integration**. Enable the Roblox checkbox and apply any appearance mode to add a native Roblox page to Lunar's left navigation. The page includes:
+An off-by-default sidebar integration inside Lunar.
 
-- **Games:** launch an official Roblox experience by URL/place ID, open approved private-server invitation URLs on Roblox's website, browse a few popular experiences, save/rename/remove game shortcuts, and optionally keep a recent-played list.
-- **Accounts:** bookmark and label up to five Roblox usernames, mark a preferred *label*, and open Roblox's **official Account Switcher**. These bookmarks are not authenticated sessions and do not select which account launches games. Switching/login takes place on Roblox's website.
-- **Settings:** choose Roblox Player vs. browser game pages, automatic website fallback, launch confirmation, popular experience visibility, and recent-game history. The Roblox installation/account settings/support links open the official sites.
+ Version 1.4.1 fixes **React error #137** (void inputs previously received `children` from the injected helper) and introduces a more complete, Roblox-style navigation screen rather than a form-only page.
 
-No Roblox passwords, authentication cookies, tokens, login proxies, multiple-instance bypasses, or unsupported FastFlags are used. Roblox graphics, volume, camera and frame-rate settings remain in-game. Roblox's official Account Switcher is currently limited to eligible users and up to five accounts on the same device. Roblox has restricted FastFlags and multi-instance launching; the patcher deliberately does not claim those unsupported features. Only the existing Windows Roblox client/protocol is used; the tab does not install Roblox or run a second Roblox binary.
+- **Home:** featured experience, continue playing, saved games and recommendations.
+- **Discover:** local curated experiences, categories, search, individual game detail screens, one-click official Player launching.
+- **Library:** save games from links and place IDs; view recent and saved experiences.
+- **Friends, Avatar, Marketplace:** navigation hubs that hand authenticated functions to official Roblox web pages. These sections cannot show the user's live account data without an authorized Roblox integration.
+- **Accounts:** locally stored username bookmarks, up to five. Real sign-in and switching take place on Roblox.com, never through collected credentials.
+- **Settings:** launch mode, website fallback, history, confirmation, and official installation/support links.
 
-This integration was verified with the available 3.7.31 and 3.7.32 renderer fixtures, with JavaScript syntax checks and a mocked game-page interaction smoke test. Actual launching in a patched Lunar installation still requires a Windows test.
+Roblox website pages cannot simply be cloned into an iframe: framing and authentication restrictions apply. The in-Lunar native catalog is a small *curated* list, not a live copy of Roblox recommendations, and actual game thumbnails are best-effort. The UI never collects session cookies, passwords or credentials and does not modify Roblox executable files or FastFlags.
+
+**Regression checks:** a test traverses rendered React element trees for void-element children (the exact cause of #137), then tests all eight hub pages, game launch links, saving, private invitations, account bookmarks and settings. A browser visual smoke test checks each page. Both known Lunar renderer fixtures undergo patch/parse validation. Live Windows launch inside Lunar remains unverified.
 
 ## Desktop application
 
