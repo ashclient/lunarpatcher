@@ -87,7 +87,7 @@ func TestRobloxIntegrationOnBothKnownRendererVersions(t *testing.T) {
 }
 
 func TestRobloxLinkValidationIsNotAFreeformExternalURL(t *testing.T) {
-	if !strings.Contains(robloxWidgetJS, `parsed.hostname.toLowerCase()`) || !strings.Contains(robloxWidgetJS, `www.roblox.com`) {
+	if !strings.Contains(robloxWidgetJS, `u.hostname.toLowerCase()`) || !strings.Contains(robloxWidgetJS, `www.roblox.com`) {
 		t.Fatal("Roblox domain validation missing")
 	}
 	if !strings.Contains(robloxWidgetJS, `^[1-9]`) {
@@ -98,5 +98,13 @@ func TestRobloxLinkValidationIsNotAFreeformExternalURL(t *testing.T) {
 	}
 	if strings.Contains(robloxWidgetJS, `eval(`) {
 		t.Fatal("unsafe code evaluation")
+	}
+}
+
+func TestRobloxHubSafeguards(t *testing.T) {
+	for _, token := range []string{"React void elements", "children.length===1", "`home`", "`discover`", "`library`", "`friends`", "`avatar`", "`marketplace`", "`accounts`", "`settings`", "`lpr-detail`", "`roblox://experiences/start?placeId="} {
+		if !strings.Contains(robloxWidgetJS, token) {
+			t.Fatalf("missing Roblox Hub feature: %s", token)
+		}
 	}
 }
