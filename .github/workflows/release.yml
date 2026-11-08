@@ -55,6 +55,10 @@ jobs:
           if (!(Test-Path $expected)) { throw "Missing $expected" }
           if (!(Test-Path 'dist/latest.yml')) { throw 'Updater metadata latest.yml missing' }
           Get-FileHash -Algorithm SHA256 $expected | Format-List
+      - name: Validate publishing script interpolation
+        shell: pwsh
+        run: |
+          if (Select-String -Path '.github/workflows/release.yml' -Pattern '\$version:' -Quiet) { throw 'Unsafe PowerShell variable interpolation before colon; use ${version}' }
       - name: Publish GitHub release if version is new
         shell: pwsh
         env:
@@ -68,7 +72,7 @@ jobs:
             Write-Host "Existing release $tag; skipping. Bump package.json version for a new release."
             exit 0
           }
-          $notes = "LunarPatcher $version: add Windows Roblox protocol launching and diagnostics, favorite game shortcuts, performance guidance, and customizable Roblox Hub layouts. Authenticated actions remain on Roblox.com. Existing clean layout, themes and updater preserved. Unsigned community build; SmartScreen may warn."
+          $notes = "LunarPatcher ${version}: add Windows Roblox protocol launching and diagnostics, favorite game shortcuts, performance guidance, and customizable Roblox Hub layouts. Authenticated actions remain on Roblox.com. Existing clean layout, themes and updater preserved. Unsigned community build; SmartScreen may warn."
           $assets = @(Get-ChildItem -Path dist -File | Where-Object { $_.Name -match '^LunarPatcher_Setup_.*\.exe(\.blockmap)?$' -or $_.Name -eq 'latest.yml' } | ForEach-Object { $_.FullName })
           if (-not ($assets | Where-Object { $_ -like '*.exe' })) { throw 'No setup executable found for release' }
           if (-not ($assets | Where-Object { $_ -like '*latest.yml' })) { throw 'Missing latest.yml for the updater' }
