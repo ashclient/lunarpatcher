@@ -20,15 +20,17 @@ type PatchReport struct {
 	Ads           string   `json:"ads"`
 	Announcements string   `json:"announcements"`
 	Theme         string   `json:"theme"`
+	Roblox        string   `json:"roblox"`
 	Notes         []string `json:"notes"`
 }
 type State struct {
-	OriginalExe  string `json:"original_exe"`
-	OriginalAsar string `json:"original_asar"`
-	PatchedExe   string `json:"patched_exe"`
-	PatchedAsar  string `json:"patched_asar"`
-	Mode         string `json:"mode"`
-	Color        string `json:"color"`
+	OriginalExe   string `json:"original_exe"`
+	OriginalAsar  string `json:"original_asar"`
+	PatchedExe    string `json:"patched_exe"`
+	PatchedAsar   string `json:"patched_asar"`
+	Mode          string `json:"mode"`
+	Color         string `json:"color"`
+	RobloxEnabled bool   `json:"robloxEnabled"`
 }
 
 const marker = "LUNAR_ADAPTIVE_V8_1"
@@ -198,7 +200,8 @@ func parseVersion(a *asarArchive) string {
 	return "unknown"
 }
 
-func patchSource(asarBytes []byte, mode, color string) ([]byte, PatchReport, error) {
+func patchSource(asarBytes []byte, mode, color string, robloxOption ...bool) ([]byte, PatchReport, error) {
+	robloxEnabled := len(robloxOption) > 0 && robloxOption[0]
 	report := PatchReport{Mode: mode, Color: color}
 	if mode != "color" {
 		report.Color = ""
@@ -262,6 +265,33 @@ func patchSource(asarBytes []byte, mode, color string) ([]byte, PatchReport, err
 		report.Announcements = "News moved to Updates; Quick Play, shortcuts, and full friends list enabled"
 	} else {
 		report.Announcements = "Unchanged in Ads Only mode"
+	}
+	if robloxEnabled {
+		mainName := "dist/assets/main.js"
+		main, exists := changes[mainName]
+		if !exists {
+			main, exists = a.entry(mainName)
+		}
+		if !exists {
+			return nil, report, errors.New("Roblox sidebar cannot be inserted: renderer missing")
+		}
+		main, e = patchRobloxSidebar(main)
+		if e != nil {
+			return nil, report, e
+		}
+		changes[mainName] = main
+		robloxStyles := robloxCSS
+		if mode == "sakura" {
+			robloxStyles += `#root .lunar-patcher-roblox-play{background:#bc5a91;border-color:#bc5a91}#root .lunar-patcher-roblox-play:hover{background:#d575a7}#root .lunar-patcher-roblox-tabs button.is-active{border-bottom-color:#ef9ac7}`
+		}
+		if mode == "color" {
+			robloxStyles += fmt.Sprintf(`#root .lunar-patcher-roblox-play{background:%s;border-color:%s}#root .lunar-patcher-roblox-tabs button.is-active{border-bottom-color:%s}`, color, color, color)
+		}
+		htmlOut = strings.Replace(htmlOut, "</head>", "<style id=\"lunar-patcher-roblox-css\">"+robloxStyles+"</style></head>", 1)
+		changes[htmlName] = []byte(htmlOut)
+		report.Roblox = "Roblox sidebar and game launcher enabled"
+	} else {
+		report.Roblox = "Disabled"
 	}
 	if mode == "layout" {
 		report.Theme = "Full friends list, Quick Play, shortcuts and Updates"
@@ -357,7 +387,8 @@ html.dark,html.dark body{background:%s!important}
 	return adsCSS
 }
 
-func Install(base, mode, color string, checkOnly bool) (PatchReport, error) {
+func Install(base, mode, color string, checkOnly bool, robloxOption ...bool) (PatchReport, error) {
+	robloxEnabled := len(robloxOption) > 0 && robloxOption[0]
 	report := PatchReport{Mode: mode, Color: color}
 	if mode != "color" {
 		report.Color = ""
@@ -428,7 +459,7 @@ func Install(base, mode, color string, checkOnly bool) (PatchReport, error) {
 	if e := validatePair(originalExe, originalAsar); e != nil {
 		return report, e
 	}
-	newAsar, report, e := patchSource(originalAsar, mode, color)
+	newAsar, report, e := patchSource(originalAsar, mode, color, robloxEnabled)
 	if e != nil {
 		return report, e
 	}
@@ -458,7 +489,7 @@ func Install(base, mode, color string, checkOnly bool) (PatchReport, error) {
 	if e := savePair(exe, asar, newExe, newAsar); e != nil {
 		return report, e
 	}
-	s := State{OriginalExe: hashBytes(originalExe), OriginalAsar: hashBytes(originalAsar), PatchedExe: hashBytes(newExe), PatchedAsar: hashBytes(newAsar), Mode: mode, Color: color}
+	s := State{OriginalExe: hashBytes(originalExe), OriginalAsar: hashBytes(originalAsar), PatchedExe: hashBytes(newExe), PatchedAsar: hashBytes(newAsar), Mode: mode, Color: color, RobloxEnabled: robloxEnabled}
 	sb, _ := json.MarshalIndent(s, "", "  ")
 	if e := writeAtomic(statePath, sb); e != nil {
 		return report, fmt.Errorf("patch applied but state could not be saved: %w", e)

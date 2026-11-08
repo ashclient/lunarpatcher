@@ -11,6 +11,18 @@ An independent Windows desktop app for adjusting the **Lunar Client launcher**. 
 
 The patch engine uses guarded renderer transforms and refuses unrecognized layout structures rather than rewriting an incompatible launcher. Backups and restoration are verified. Launcher updates may require a new patch engine. The original Lunar executable's digital signature is invalidated when patched.
 
+## Optional Roblox tab (Windows)
+
+LunarPatcher has an **off-by-default Roblox sidebar integration**. Enable the Roblox checkbox and apply any appearance mode to add a native Roblox page to Lunar's left navigation. The page includes:
+
+- **Games:** launch an official Roblox experience by URL/place ID, open approved private-server invitation URLs on Roblox's website, browse a few popular experiences, save/rename/remove game shortcuts, and optionally keep a recent-played list.
+- **Accounts:** bookmark and label up to five Roblox usernames, mark a preferred *label*, and open Roblox's **official Account Switcher**. These bookmarks are not authenticated sessions and do not select which account launches games. Switching/login takes place on Roblox's website.
+- **Settings:** choose Roblox Player vs. browser game pages, automatic website fallback, launch confirmation, popular experience visibility, and recent-game history. The Roblox installation/account settings/support links open the official sites.
+
+No Roblox passwords, authentication cookies, tokens, login proxies, multiple-instance bypasses, or unsupported FastFlags are used. Roblox graphics, volume, camera and frame-rate settings remain in-game. Roblox's official Account Switcher is currently limited to eligible users and up to five accounts on the same device. Roblox has restricted FastFlags and multi-instance launching; the patcher deliberately does not claim those unsupported features. Only the existing Windows Roblox client/protocol is used; the tab does not install Roblox or run a second Roblox binary.
+
+This integration was verified with the available 3.7.31 and 3.7.32 renderer fixtures, with JavaScript syntax checks and a mocked game-page interaction smoke test. Actual launching in a patched Lunar installation still requires a Windows test.
+
 ## Desktop application
 
 The Electron UI is organized like Windows Settings: Appearance, Updates, and About. It follows Windows light/dark system preference and keeps Apply/Restore accessible in a persistent action bar. It uses a secure preload bridge with `contextIsolation`, sandboxing, and a restrictive content security policy.

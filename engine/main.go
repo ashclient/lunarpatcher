@@ -10,13 +10,14 @@ import (
 	"time"
 )
 
-var appVersion = "1.3.0"
+var appVersion = "1.4.0"
 
 func defaultDir() string { return filepath.Join(os.Getenv("LOCALAPPDATA"), "Programs", "Lunar Client") }
 func main() {
 	dir := flag.String("dir", defaultDir(), "Lunar installation directory")
 	mode := flag.String("mode", "ads", "ads, layout, sakura or color")
 	color := flag.String("color", "#D676A5", "Custom background color, #RRGGBB")
+	roblox := flag.Bool("roblox", false, "Enable Roblox launcher in Lunar sidebar")
 	restore := flag.Bool("restore", false, "restore backed-up original Lunar files")
 	check := flag.Bool("check", false, "validate compatibility without modifying files")
 	checkUpdate := flag.Bool("check-update", false, "check for new LunarPatcher release")
@@ -67,7 +68,7 @@ func main() {
 		fmt.Println("Original launcher restored")
 		return
 	}
-	report, err := Install(*dir, *mode, *color, *check)
+	report, err := Install(*dir, *mode, *color, *check, *roblox)
 	if err != nil {
 		fail(err)
 	}

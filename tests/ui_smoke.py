@@ -67,11 +67,14 @@ def go():
     assert page.locator('#themePreview').get_attribute('class')=='theme-preview sakura'
     page.locator('label[data-mode="layout"]').click()
     assert page.locator('.mode-option.selected').get_attribute('data-mode')=='layout'
+    # Optional Roblox sidebar is independent of the visual theme.
+    page.locator('label[for="robloxToggle"]').click()
+    assert page.locator('#robloxToggle').is_checked()
     page.locator('#applyBtn').click()
     page.wait_for_function("document.querySelector('#actionMessage').textContent.includes('Changes applied')")
     calls=page.evaluate("window._bridgeCalls")
     assert any(c[0]=='check' and c[2]=='layout' for c in calls),calls
-    assert any(c[0]=='apply' and c[2]=='layout' for c in calls),calls
+    assert any(c[0]=='apply' and c[2]=='layout' and c[4] is True for c in calls),calls
 
     # 3. Restore flow requires explicit confirmation.
     page.locator('#restoreBtn').click()

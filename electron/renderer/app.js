@@ -7,10 +7,10 @@ const MODES = Object.freeze({
   sakura: {title:'Sakura', kicker:'Sakura · fixed theme', description:'Cherry-blossom artwork, soft pink panels and all Clean Layout features.'},
   color: {title:'Custom Color', kicker:'Your own palette', description:'Custom background and matching accents with all Clean Layout features.'}
 });
-const state = {mode:'sakura',color:'#E59CBC',folder:'',busy:false,info:null,update:null,log:'No operation yet.',refreshSeq:0};
+const state = {mode:'sakura',color:'#E59CBC',folder:'',robloxEnabled:false,busy:false,info:null,update:null,log:'No operation yet.',refreshSeq:0};
 const friendlyError = e => String(e?.message || e || 'Unknown error').replace(/^ERROR:\s*/i,'').slice(0,1200);
 function showMessage(text,kind='') { const el=$('actionMessage');el.textContent=text;el.className='action-copy'+(kind?' '+kind:''); }
-function persist() { if(api) api.savePreferences({folder:state.folder,mode:state.mode,color:state.color}).catch(()=>{}); }
+function persist() { if(api) api.savePreferences({folder:state.folder,mode:state.mode,color:state.color,robloxEnabled:state.robloxEnabled}).catch(()=>{}); }
 function showView(view) {
   if(!['appearance','updates','about'].includes(view))return;
   document.querySelectorAll('.nav-item[data-view]').forEach(button=>{
@@ -49,7 +49,7 @@ function chooseColor(value) {
 }
 function setBusy(value,description) {
   state.busy=!!value;
-  for(const id of ['applyBtn','browseBtn','refreshBtn','folderInput','colorPicker'])$(id).disabled=state.busy;
+  for(const id of ['applyBtn','browseBtn','refreshBtn','folderInput','colorPicker','robloxToggle'])$(id).disabled=state.busy;
   document.querySelectorAll('input[name="mode"]').forEach(input=>{input.disabled=state.busy;});
   $('restoreBtn').disabled=state.busy || !state.info?.canRestore || !!state.info?.changedSincePatch;
   $('applyBtn').textContent=state.busy?'Applying…':'Apply changes';
@@ -69,7 +69,7 @@ async function refresh(silent=false) {
     state.info=status;
     const patched=status.mode && status.mode!=='original';
     $('installationHeading').textContent='Lunar Client '+(status.version||'');
-    $('statusDetails').textContent=status.changedSincePatch?'Lunar files changed outside LunarPatcher':patched?('Installed: '+(MODES[status.mode]?.title||status.mode)):'Original launcher detected';
+    $('statusDetails').textContent=status.changedSincePatch?'Lunar files changed outside LunarPatcher':patched?('Installed: '+(MODES[status.mode]?.title||status.mode)+(status.robloxEnabled?' · Roblox enabled':'')):'Original launcher detected';
     setStatus(status.changedSincePatch?'Modified':patched?'Customized':'Detected',status.changedSincePatch?'warn':'success');
     $('restoreBtn').disabled=state.busy||!status.canRestore||!!status.changedSincePatch;
     if(status.changedSincePatch&&!silent)showMessage('Launcher files changed. Inspect compatibility before applying again.','error');
@@ -92,10 +92,10 @@ async function applyPatch() {
   if(!state.folder){showMessage('Choose the Lunar Client installation folder first.','error');return;}
   setBusy(true,'Checking compatibility…');
   try {
-    const check=await api.check(state.folder,state.mode,state.color);
+    const check=await api.check(state.folder,state.mode,state.color,state.robloxEnabled);
     record('Compatibility check',check);
     showMessage('Applying '+MODES[state.mode].title+'…');
-    const result=await api.apply(state.folder,state.mode,state.color);
+    const result=await api.apply(state.folder,state.mode,state.color,state.robloxEnabled);
     record('Applied '+MODES[state.mode].title,result);
     showMessage('Changes applied. You can open Lunar Client normally.','success');
   }catch(e){const message=friendlyError(e);record('Patch failed',message);showMessage(message,'error');}
@@ -127,6 +127,7 @@ function wireEvents() {
   document.querySelectorAll('[data-view]').forEach(button=>button.addEventListener('click',()=>showView(button.dataset.view)));
   document.querySelectorAll('input[name="mode"]').forEach(input=>input.addEventListener('change',()=>chooseMode(input.value)));
   $('colorPicker').addEventListener('input',event=>chooseColor(event.target.value));
+  $('robloxToggle').addEventListener('change',event=>{state.robloxEnabled=event.target.checked;persist();});
   $('folderInput').addEventListener('change',()=>{state.folder=$('folderInput').value.trim();persist();refresh();});
   $('browseBtn').addEventListener('click',async()=>{try{const folder=await api.pickFolder();if(folder){state.folder=folder;$('folderInput').value=folder;persist();await refresh();}}catch(e){showMessage(friendlyError(e),'error');}});
   $('refreshBtn').addEventListener('click',()=>refresh());
@@ -156,6 +157,8 @@ async function initialize() {
     $('aboutVersion').textContent=info.version;
     chooseColor(prefs.color||'#E59CBC');
     chooseMode(MODES[prefs.mode]?prefs.mode:'sakura');
+    state.robloxEnabled=prefs.robloxEnabled===true;
+    $('robloxToggle').checked=state.robloxEnabled;
     renderUpdate(info.update);
     await refresh(true);
   }catch(e){showMessage(friendlyError(e),'error');}

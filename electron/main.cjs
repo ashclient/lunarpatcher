@@ -21,14 +21,15 @@ function getPreferences() {
     const p = JSON.parse(fs.readFileSync(prefsPath(), 'utf8'));
     return {folder:typeof p.folder==='string' ? p.folder : DEFAULT_FOLDER,
             mode:VALID_MODES.has(p.mode)?p.mode:'sakura',
-            color:HEX.test(p.color)?p.color:'#E59CBC'};
-  } catch { return {folder: DEFAULT_FOLDER, mode:'sakura', color:'#E59CBC'}; }
+            color:HEX.test(p.color)?p.color:'#E59CBC', robloxEnabled:p.robloxEnabled===true};
+  } catch { return {folder: DEFAULT_FOLDER, mode:'sakura', color:'#E59CBC',robloxEnabled:false}; }
 }
 function savePreferences(p) {
   const clean = {
     folder:typeof p?.folder==='string' && p.folder.length<1000?p.folder:DEFAULT_FOLDER,
     mode:VALID_MODES.has(p?.mode)?p.mode:'sakura',
-    color:HEX.test(p?.color||'')?p.color:'#E59CBC'
+    color:HEX.test(p?.color||'')?p.color:'#E59CBC',
+    robloxEnabled:p?.robloxEnabled===true
   };
   fs.mkdirSync(path.dirname(prefsPath()), {recursive:true});
   fs.writeFileSync(prefsPath(), JSON.stringify(clean,null,2),{encoding:'utf8',mode:0o600});
@@ -108,6 +109,7 @@ app.whenReady().then(()=>{
     const folder=asFolder(args.folder);
     const mode=VALID_MODES.has(args?.mode)?args.mode:null;
     const color=HEX.test(args?.color||'')?args.color:'#E59CBC';
+    const robloxEnabled=args?.robloxEnabled===true;
     if(['check','apply'].includes(operation)&&!mode) throw new Error('Select a valid patch mode');
     if(busy) throw new Error('An operation is already running');
     busy=true;
@@ -115,7 +117,7 @@ app.whenReady().then(()=>{
       const argv=['--dir',folder];
       if(operation==='status')argv.push('--status');
       else if(operation==='restore')argv.push('--restore');
-      else argv.push('--mode',mode,'--color',color,...(operation==='check'?['--check']:[]));
+      else argv.push('--mode',mode,'--color',color,...(robloxEnabled?['--roblox']:[]),...(operation==='check'?['--check']:[]));
       const output=await execBackend(argv);
       if(operation==='restore')return {ok:true,restored:true};
       let result;

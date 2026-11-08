@@ -11,6 +11,7 @@ type InstallStatus struct {
 	Version           string `json:"version"`
 	Mode              string `json:"mode"`
 	Color             string `json:"color"`
+	RobloxEnabled     bool   `json:"robloxEnabled"`
 	CanRestore        bool   `json:"canRestore"`
 	ChangedSincePatch bool   `json:"changedSincePatch"`
 	Folder            string `json:"folder"`
@@ -40,6 +41,7 @@ func readInstallStatus(base string) (InstallStatus, error) {
 	if st != nil {
 		status.Mode = st.Mode
 		status.Color = st.Color
+		status.RobloxEnabled = st.RobloxEnabled
 		status.CanRestore = true
 		currentExe, err := os.ReadFile(exe)
 		if err != nil {

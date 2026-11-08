@@ -66,7 +66,7 @@ jobs:
             Write-Host "Existing release $tag; skipping. Bump package.json version for a new release."
             exit 0
           }
-          $notes = "LunarPatcher 1.3.0: Fluent-inspired settings UI, light/dark system theme, fixed action bar, separate Sakura/Custom Color modes, silent in-app updater install from verified cache, periodic update checks, and expanded smoke tests. Preserves the 1.2.1 compatible patch engine and original backup/restore safeguards. Unsigned community build; SmartScreen may warn."
+          $notes = "LunarPatcher 1.4.0: optional Roblox sidebar page with official experience links, saved shortcuts, local account bookmarks, and launch preferences. Roblox login remains on the official website; no cookies/tokens stored. Includes the Lunar Clean Layout and Sakura themes, automatic updater, and backup/restore. Unsigned community build; SmartScreen may warn."
           $assets = @(Get-ChildItem -Path dist -File | Where-Object { $_.Name -match '^LunarPatcher_Setup_.*\.exe(\.blockmap)?$' -or $_.Name -eq 'latest.yml' } | ForEach-Object { $_.FullName })
           if (-not ($assets | Where-Object { $_ -like '*.exe' })) { throw 'No setup executable found for release' }
           if (-not ($assets | Where-Object { $_ -like '*latest.yml' })) { throw 'Missing latest.yml for the updater' }
