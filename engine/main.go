@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-var appVersion = "1.4.0"
+var appVersion = "1.4.1"
 
 func defaultDir() string { return filepath.Join(os.Getenv("LOCALAPPDATA"), "Programs", "Lunar Client") }
 func main() {
