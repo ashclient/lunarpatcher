@@ -25,7 +25,7 @@ const React={
 };
 const frames=[];
 const ctx={window:{lunarPatcherRobloxBrowser:bridge,addEventListener(){},removeEventListener(){}},document:{addEventListener(){},removeEventListener(){}},ResizeObserver:class{observe(){} disconnect(){}},requestAnimationFrame:fn=>{frames.push(fn);return frames.length},cancelAnimationFrame:()=>{},URL,Promise,console,JSX,React};
-vm.runInNewContext(src.replaceAll('__JSX__','JSX').replaceAll('__REACT__','React')+'\nthis.page=lunarPatcherRobloxPage;',ctx);
+vm.runInNewContext('var '+src.replaceAll('__JSX__','JSX').replaceAll('__REACT__','React')+'dW=()=>{};\nthis.page=lunarPatcherRobloxPage;',ctx);
 const walk=(tree,list=[])=>{if(!tree||typeof tree!=='object')return list;list.push(tree);const c=tree.props?.children;if(Array.isArray(c))c.forEach(x=>walk(x,list));else walk(c,list);return list};
 const tree=ctx.page();
 const elements=walk(tree);

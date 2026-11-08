@@ -1,7 +1,7 @@
 {
   "name": "lunarpatcher",
   "productName": "LunarPatcher",
-  "version": "1.6.0",
+  "version": "1.6.1",
   "description": "Patch-only desktop customizer; optional Roblox.com browser runs inside Lunar Client",
   "author": "ashclient",
   "license": "MIT",
@@ -11,7 +11,7 @@
     "start": "electron .",
     "build:engine:win": "cd engine && go build -trimpath -ldflags=\"-s -w\" -o ../build/bin/LunarPatcherEngine.exe .",
     "dist:win": "electron-builder --win nsis --x64 --publish never",
-    "test:syntax": "node --check electron/main.cjs && node --check electron/preload.cjs && node --check electron/renderer/app.js && node --check engine/assets/roblox_bridge_main.js && node --check engine/assets/roblox_bridge_preload.js && node --check engine/assets/roblox_widget.js",
+    "test:syntax": "node --check electron/main.cjs && node --check electron/preload.cjs && node --check electron/renderer/app.js && node --check engine/assets/roblox_bridge_main.js && node --check engine/assets/roblox_bridge_preload.js",
     "test:updater": "node tests/updater_smoke.cjs",
     "test:roblox": "node tests/roblox_bridge_smoke.cjs && node tests/roblox_widget_smoke.cjs",
     "test:smoke": "npm run test:syntax && npm run test:updater && npm run test:roblox"

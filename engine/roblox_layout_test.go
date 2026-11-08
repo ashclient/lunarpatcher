@@ -104,6 +104,12 @@ func TestRobloxBridgeSafety(t *testing.T) {
 		}
 	}
 }
+func TestRobloxWidgetPreservesMinifiedDeclarationChain(t *testing.T) {
+	if !strings.HasSuffix(robloxWidgetJS, "},\n") {
+		t.Fatal("Roblox React component must end in a comma before Lunar's existing declaration")
+	}
+}
+
 func TestRobloxBridgeRejectsUnrecognizedLunarMain(t *testing.T) {
 	_, _, err := patchRobloxElectronBridge([]byte("unknown"), []byte("unknown"))
 	if err == nil {
