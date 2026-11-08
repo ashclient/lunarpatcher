@@ -2,73 +2,48 @@
 const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const vm=require('node:vm');
-const code=fs.readFileSync('engine/assets/roblox_widget.js','utf8')
- .split('\n').slice(1).join('\n')
- .replaceAll('__JSX__','V').replaceAll('__REACT__','B').replaceAll('__INITIATOR__','tp.sidebar').replaceAll('__ROBLOX_ART__',JSON.stringify({'2753915549':'data:image/png;base64,YQ=='}))
- .trim().replace(/,\s*$/,'');
-const opened=[],stored=new Map();const hooks=[];let hookIndex=0;
-const ctx={V:{jsx:(type,props)=>({type,props})},B:{useState:init=>{const i=hookIndex++;if(!(i in hooks))hooks[i]=typeof init==='function'?init():init;return[hooks[i],next=>{hooks[i]=typeof next==='function'?next(hooks[i]):next}]}},tp:{sidebar:'sidebar'},
-window:{lunar:{misc:{openExternalLink:async args=>{opened.push(args);return true}}},confirm:()=>true},
-localStorage:{getItem:key=>stored.get(key)||null,setItem:(key,v)=>stored.set(key,v)},URL,Promise,JSON,console};
-vm.createContext(ctx);vm.runInContext('var '+code+';',ctx);
-const VOID=new Set('area base br col embed hr img input link meta param source track wbr'.split(' '));
-const render=()=>{hookIndex=0;const tree=ctx.lunarPatcherRobloxPage();walk(tree,el=>{
-  if(typeof el.type==='string'&&VOID.has(el.type)){
-   assert.equal(Object.prototype.hasOwnProperty.call(el.props||{},'children'),false,
-     `React #137: ${el.type} must not receive children`);
-  }
-});return tree};
-function walk(node,fn){if(node==null||typeof node!=='object')return;fn(node);const c=node.props?.children;for(const x of Array.isArray(c)?c:[c])walk(x,fn)}
-function all(tree,type){const a=[];walk(tree,n=>{if(n.type===type)a.push(n)});return a}
-function button(tree,text){return all(tree,'button').find(n=>n.props?.children===text||(Array.isArray(n.props?.children)&&n.props.children.at(-1)===text))}
-function input(tree,placeholder){return all(tree,'input').find(n=>n.props?.placeholder===placeholder)}
-function tap(x){assert.ok(x,'Missing button');x.props.onClick()}
-function type(x,value){assert.ok(x,'Missing input');x.props.onChange({target:{value}})}
-const tick=async()=>{await Promise.resolve();await Promise.resolve()};
+const path=require('node:path');
+const src=fs.readFileSync(path.join(__dirname,'../engine/assets/roblox_widget.js'),'utf8');
+const calls=[],listeners=[],effects=[];
+const bridge={
+ show:bounds=>{calls.push(['show',bounds]);return Promise.resolve(true)},
+ bounds:bounds=>{calls.push(['bounds',bounds]);return Promise.resolve(true)},
+ hide:()=>{calls.push(['hide']);return Promise.resolve(true)},
+ navigate:url=>{calls.push(['navigate',url]);return Promise.resolve(true)},
+ external:url=>{calls.push(['external',url]);return Promise.resolve(true)},
+ reload:()=>{calls.push(['reload']);return Promise.resolve(true)},
+ home:()=>{calls.push(['home']);return Promise.resolve(true)},
+ back:()=>Promise.resolve(true),forward:()=>Promise.resolve(true),
+ onState:fn=>{listeners.push(fn);return()=>calls.push(['unsubscribe'])}
+};
+const state=[],refs=[];let hook=0;
+const JSX={jsx:(type,props)=>({type,props:props||{}}),jsxs:(type,props)=>({type,props:props||{}})};
+const React={
+ useState:initial=>{const index=hook++;if(!(index in state))state[index]=typeof initial==='function'?initial():initial;return [state[index],next=>{state[index]=next}]},
+ useRef:value=>{const ref={current:value};refs.push(ref);return ref},
+ useEffect:fn=>effects.push(fn)
+};
+const frames=[];
+const ctx={window:{lunarPatcherRobloxBrowser:bridge,addEventListener(){},removeEventListener(){}},document:{addEventListener(){},removeEventListener(){}},ResizeObserver:class{observe(){} disconnect(){}},requestAnimationFrame:fn=>{frames.push(fn);return frames.length},cancelAnimationFrame:()=>{},URL,Promise,console,JSX,React};
+vm.runInNewContext(src.replaceAll('__JSX__','JSX').replaceAll('__REACT__','React')+'\nthis.page=lunarPatcherRobloxPage;',ctx);
+const walk=(tree,list=[])=>{if(!tree||typeof tree!=='object')return list;list.push(tree);const c=tree.props?.children;if(Array.isArray(c))c.forEach(x=>walk(x,list));else walk(c,list);return list};
+const tree=ctx.page();
+const elements=walk(tree);
+for(const e of elements){if(e.type==='input'&&('children' in e.props))throw Error('React void input received children');}
+assert.equal(elements.filter(e=>e.type==='input').length,1);
+assert.equal(elements.filter(e=>e.type==='section').length,1);
+const viewport=elements.find(e=>e.props?.className==='lpr-browser-viewport');assert(viewport);
+viewport.props.ref.current={getBoundingClientRect:()=>({left:110,top:125,width:700,height:520})};
+const cleanup=effects[0]();assert.equal(typeof cleanup,'function');frames.shift()?.();
 (async()=>{
- let tree=render();
- assert.ok(all(tree,'img').some(n=>n.props?.src==='data:image/png;base64,YQ=='),'actual game art not wired into cards');
- for(const nav of ['Home','Discover','Library','Friends','Avatar','Marketplace','Accounts','Settings'])
-  assert.ok(button(tree,nav),`Missing ${nav} navigation`);
- // Home -> details -> launch -> saved
- const details=button(tree,'Game details');tap(details);tree=render();
- assert.ok(button(tree,'Save to library'));tap(button(tree,'Save to library'));
- assert.ok(button(tree,'▶ Play'));tap(button(tree,'▶ Play'));await tick();
- assert.equal(opened.at(-1).url,'lunarpatcher://launch?placeId=2753915549');
- assert.equal(JSON.parse(stored.get('lunarpatcher.roblox.favorites.v1')).length,1);
- tap(button(tree,'← Back'));tree=render();
- tap(button(tree,'Discover'));tree=render();
- assert.ok(all(tree,'article').length>=7);
- tap(button(tree,'Horror'));tree=render();assert.equal(all(tree,'article').length,1);
- tap(button(tree,'All'));tree=render();assert.ok(all(tree,'article').length>=7);
- // Search filters catalog, and search input has no React children.
- type(input(tree,'Search experiences'),'DOORS');tree=render();assert.equal(all(tree,'article').length,1);
- type(input(tree,'Search experiences'),'');tree=render();
- // Library URL, saved shortcuts, invalid URL rejection.
- tap(button(tree,'Library'));tree=render();
- type(input(tree,'Paste a Roblox game link or place ID'),'https://www.roblox.com/games/4924922222/Brookhaven-RP');
- tree=render();tap(button(tree,'Save'));
- assert.equal(JSON.parse(stored.get('lunarpatcher.roblox.favorites.v1')).length,2);
- tree=render();type(input(tree,'Paste a Roblox game link or place ID'),'https://evil.example/games/999');tree=render();const before=opened.length;tap(button(tree,'Play'));await tick();assert.equal(opened.length,before);
- type(input(tree,'Paste a Roblox game link or place ID'),'https://www.roblox.com/share?code=AbcDef1234&type=Server');tree=render();tap(button(tree,'Play'));await tick();assert.equal(opened.at(-1).url,'https://www.roblox.com/share?code=AbcDef1234&type=Server');
- // Official-only friends/avatar/marketplace paths.
- for(const [nav,label,url] of [['Friends','Open friends ↗','https://www.roblox.com/users/friends'],['Avatar','Open Avatar Editor ↗','https://www.roblox.com/my/avatar'],['Marketplace','Browse Marketplace ↗','https://www.roblox.com/catalog']]){
-  tree=render();tap(button(tree,nav));tree=render();tap(button(tree,label));await tick();assert.equal(opened.at(-1).url,url);
- }
- // Account profiles are bookmarks, not a session mechanism.
- tree=render();tap(button(tree,'Accounts'));tree=render();
- type(input(tree,'Roblox username'),'Sample_User');tree=render();type(input(tree,'Optional label'),'Main');tree=render();tap(button(tree,'Add'));
- assert.equal(JSON.parse(stored.get('lunarpatcher.roblox.accounts.v1')).length,1);
- tree=render();tap(button(tree,'Switch'));await tick();assert.equal(opened.at(-1).url,'https://www.roblox.com/home');
- assert.ok(!JSON.stringify([...stored]).match(/authcookie|password|sessiontoken/i));
- // Settings changes.
- tree=render();tap(button(tree,'Settings'));tree=render();
- const select=all(tree,'select')[0];assert.ok(select);select.props.onChange({target:{value:'website'}});
- assert.equal(JSON.parse(stored.get('lunarpatcher.roblox.settings.v1')).launchMode,'website');
- // Performance and appearance settings should render and persist.
- tree=render();assert.ok(all(tree,'option').some(x=>x.props?.value==='240'));
- const layouts=all(tree,'select').find(x=>(x.props?.children||[]).some?.(y=>y?.props?.value==='compact'));
- assert.ok(layouts);layouts.props.onChange({target:{value:'compact'}});
- assert.equal(JSON.parse(stored.get('lunarpatcher.roblox.settings.v1')).hubLayout,'compact');
- console.log('PASS Roblox hub: real void-element validation, 8 pages, details, launch, saving, link safety, account bookmarks, settings');
-})().catch(e=>{console.error(e);process.exit(1)});
+ await new Promise(resolve=>setImmediate(resolve));
+ assert.equal(calls[0][0],'show');assert.equal(calls[0][1].width,700);
+ const inputs=elements.filter(e=>e.type==='input'); assert.equal(inputs[0].props.value,'https://www.roblox.com/home');
+ const buttons=elements.filter(e=>e.type==='button');
+ buttons.find(e=>e.props.title==='Home').props.onClick();
+ buttons.find(e=>e.props.title==='Reload').props.onClick();
+ await new Promise(resolve=>setImmediate(resolve));assert(calls.some(x=>x[0]==='home'));assert(calls.some(x=>x[0]==='reload'));
+ cleanup();await new Promise(resolve=>setImmediate(resolve));
+ assert.equal(calls.at(-1)[0],'hide');
+ console.log('PASS: in-Lunar Roblox website, native toolbar, safe React void elements, browser lifecycle');
+})().catch(e=>{console.error(e);process.exitCode=1});

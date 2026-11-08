@@ -3,108 +3,110 @@ package main
 import (
 	"bytes"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
 
-func TestRobloxIntegrationOnBothKnownRendererVersions(t *testing.T) {
-	fixtures := []struct {
+func TestRobloxEmbeddedWebsitePatchingBothRenderers(t *testing.T) {
+	for _, fixture := range []struct {
 		path        string
 		reconstruct bool
-	}{{"/mnt/data/app.asar", false}, {"/mnt/data/app(3).asar", true}}
-	for _, item := range fixtures {
-		t.Run(item.path, func(t *testing.T) {
-			raw, err := os.ReadFile(item.path)
+	}{{"/mnt/data/app.asar", false}, {"/mnt/data/app(3).asar", true}} {
+		t.Run(filepath.Base(fixture.path), func(t *testing.T) {
+			raw, err := os.ReadFile(fixture.path)
 			if os.IsNotExist(err) {
 				t.Skip("fixture unavailable")
 			}
 			if err != nil {
 				t.Fatal(err)
 			}
-			if item.reconstruct {
+			if fixture.reconstruct {
 				raw, err = originalForTest(raw)
 				if err != nil {
 					t.Fatal(err)
 				}
 			}
+			original, err := parseAsar(raw)
+			if err != nil {
+				t.Fatal(err)
+			}
+			origMain, _ := original.entry("dist-electron/electron/main.js")
+			origPreload, _ := original.entry("dist-electron/preload/launcher/index.js")
 			for _, mode := range []string{"ads", "layout", "sakura", "color"} {
-				modified, report, err := patchSource(raw, mode, "#D676A5", true)
+				patched, report, err := patchSource(raw, mode, "#D676A5", true)
 				if err != nil {
 					t.Fatalf("%s: %v", mode, err)
 				}
-				if report.Roblox != "Roblox sidebar and game launcher enabled" {
-					t.Fatalf("%s missing report", mode)
+				if !strings.Contains(report.Roblox, "Roblox.com") {
+					t.Fatalf("missing browser report %s", report.Roblox)
 				}
-				a, err := parseAsar(modified)
+				a, err := parseAsar(patched)
 				if err != nil {
 					t.Fatal(err)
 				}
-				code, _ := a.entry("dist/assets/main.js")
+				renderer, _ := a.entry("dist/assets/main.js")
+				main, _ := a.entry("dist-electron/electron/main.js")
+				preload, _ := a.entry("dist-electron/preload/launcher/index.js")
 				html, _ := a.entry("dist/html/main.html")
-				for _, want := range []string{"lunarPatcherRobloxPage=", "lunarPatcherRobloxIcon=", "path:`/roblox`", "roblox://experiences/start?placeId=", "lunarpatcher.roblox."} {
-					if !bytes.Contains(code, []byte(want)) {
-						t.Fatalf("%s missing %s", mode, want)
+				for _, tok := range []string{"lunarPatcherRobloxPage=", "lunarPatcherRobloxIcon=", "path:`/roblox`", "lunarPatcherRobloxBrowser", "lpr-browser-viewport"} {
+					if !bytes.Contains(renderer, []byte(tok)) {
+						t.Fatalf("%s renderer lacks %s", mode, tok)
 					}
+				}
+				if !bytes.Contains(main, []byte("lunarpatcher:roblox:show")) || !bytes.Contains(main, []byte("persist:lunarpatcher-roblox")) {
+					t.Fatal("browser backend missing")
+				}
+				if !bytes.Contains(preload, []byte("lunarPatcherRobloxBrowser")) {
+					t.Fatal("preload bridge missing")
+				}
+				if bytes.Equal(main, origMain) || bytes.Equal(preload, origPreload) {
+					t.Fatal("browser bridge not installed")
 				}
 				if !bytes.Contains(html, []byte("lunar-patcher-roblox-css")) {
-					t.Fatal("Roblox CSS missing")
+					t.Fatal("browser styles missing")
 				}
-				if mode != "ads" && !bytes.Contains(code, []byte("lunarPatcherHomeTools=")) {
-					t.Fatal("layout missing")
+				if bytes.Contains(renderer, []byte("__ROBLOX_ART__")) || bytes.Contains(renderer, []byte("roblox://experiences/start?placeId=")) {
+					t.Fatal("old faux launcher code remains")
 				}
-				if mode == "ads" && bytes.Contains(code, []byte("lunarPatcherHomeTools=")) {
-					t.Fatal("ads-only changed unrelated home layout")
+				if mode != "ads" && !bytes.Contains(renderer, []byte("lunarPatcherHomeTools=")) {
+					t.Fatal("clean home layout regressed")
 				}
-				path := t.TempDir() + "/patched.mjs"
-				if mode == "sakura" {
-					external := "/mnt/data/lunarpatcher_v140/validated_331.mjs"
-					if item.reconstruct {
-						external = "/mnt/data/lunarpatcher_v140/validated_332.mjs"
-					}
-					if err := os.WriteFile(external, code, 0600); err != nil {
-						t.Fatal(err)
-					}
-				}
-				if err := os.WriteFile(path, code, 0600); err != nil {
-					t.Fatal(err)
-				}
-				_ = path // Node --check run separately when local fixture test is exercised.
 			}
-			unchanged, report, err := patchSource(raw, "layout", "#D676A5", false)
+			patched, report, err := patchSource(raw, "layout", "#D676A5", false)
 			if err != nil {
 				t.Fatal(err)
 			}
 			if report.Roblox != "Disabled" {
-				t.Fatal("toggle disabled report incorrect")
+				t.Fatalf("unexpected toggle report %s", report.Roblox)
 			}
-			a, _ := parseAsar(unchanged)
-			main, _ := a.entry("dist/assets/main.js")
-			if strings.Contains(string(main), "lunarPatcherRobloxPage=") {
-				t.Fatal("Roblox injected while disabled")
+			a, _ := parseAsar(patched)
+			main, _ := a.entry("dist-electron/electron/main.js")
+			preload, _ := a.entry("dist-electron/preload/launcher/index.js")
+			if !bytes.Equal(main, origMain) || !bytes.Equal(preload, origPreload) {
+				t.Fatal("disabled Roblox changed Electron backend")
 			}
 		})
 	}
 }
-
-func TestRobloxLinkValidationIsNotAFreeformExternalURL(t *testing.T) {
-	if !strings.Contains(robloxWidgetJS, `u.hostname.toLowerCase()`) || !strings.Contains(robloxWidgetJS, `www.roblox.com`) {
-		t.Fatal("Roblox domain validation missing")
+func TestRobloxBridgeSafety(t *testing.T) {
+	for _, token := range []string{"nodeIntegration:false", "contextIsolation:true", "sandbox:true", "webSecurity:true", "persist:lunarpatcher-roblox", "setPermissionRequestHandler", "will-navigate", "setWindowOpenHandler", "isOfficial(url)", "BrowserWindow.fromWebContents", "lunarpatcher:roblox:hide"} {
+		if !strings.Contains(robloxMainBridge, token) {
+			t.Fatalf("browser missing safety check %s", token)
+		}
 	}
-	if !strings.Contains(robloxWidgetJS, `^[1-9]`) {
-		t.Fatal("place ID validation missing")
+	if strings.Contains(robloxMainBridge, "webSecurity:false") || strings.Contains(robloxMainBridge, "executeJavaScript(") {
+		t.Fatal("untrusted-site security regression")
 	}
-	if !strings.Contains(robloxWidgetJS, `accounts.v1`) || !strings.Contains(robloxWidgetJS, `settings.v1`) {
-		t.Fatal("account and settings storage missing")
-	}
-	if strings.Contains(robloxWidgetJS, `eval(`) {
-		t.Fatal("unsafe code evaluation")
+	for _, token := range []string{"useEffect", "bridge.show(b)", "bridge.hide()", "lpr-browser-address", "https://www.roblox.com/home"} {
+		if !strings.Contains(robloxWidgetJS, token) {
+			t.Fatalf("renderer missing %s", token)
+		}
 	}
 }
-
-func TestRobloxHubSafeguards(t *testing.T) {
-	for _, token := range []string{"React void elements", "children.length===1", "`home`", "`discover`", "`library`", "`friends`", "`avatar`", "`marketplace`", "`accounts`", "`settings`", "`lpr-detail`", "`roblox://experiences/start?placeId="} {
-		if !strings.Contains(robloxWidgetJS, token) {
-			t.Fatalf("missing Roblox Hub feature: %s", token)
-		}
+func TestRobloxBridgeRejectsUnrecognizedLunarMain(t *testing.T) {
+	_, _, err := patchRobloxElectronBridge([]byte("unknown"), []byte("unknown"))
+	if err == nil {
+		t.Fatal("unrecognized Electron should fail closed")
 	}
 }

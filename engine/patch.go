@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"context"
 	_ "embed"
 	"encoding/base64"
 	"encoding/json"
@@ -280,21 +279,25 @@ func patchSourceWithArtwork(asarBytes []byte, mode, color string, robloxEnabled 
 		if !exists {
 			return nil, report, errors.New("Roblox sidebar cannot be inserted: renderer missing")
 		}
-		main, e = patchRobloxSidebarWithArtwork(main, artwork)
+		main, e = patchRobloxSidebar(main)
 		if e != nil {
 			return nil, report, e
 		}
 		changes[mainName] = main
-		robloxStyles := robloxCSS
-		if mode == "sakura" {
-			robloxStyles += `#root .lunar-patcher-roblox-play{background:#bc5a91;border-color:#bc5a91}#root .lunar-patcher-roblox-play:hover{background:#d575a7}#root .lunar-patcher-roblox-tabs button.is-active{border-bottom-color:#ef9ac7}`
+		electronMain, mainOK := a.entry("dist-electron/electron/main.js")
+		preload, preloadOK := a.entry("dist-electron/preload/launcher/index.js")
+		if !mainOK || !preloadOK {
+			return nil, report, errors.New("Lunar browser main/preload files moved; refusing patch")
 		}
-		if mode == "color" {
-			robloxStyles += fmt.Sprintf(`#root .lunar-patcher-roblox-play{background:%s;border-color:%s}#root .lunar-patcher-roblox-tabs button.is-active{border-bottom-color:%s}`, color, color, color)
+		newMain, newPreload, bridgeErr := patchRobloxElectronBridge(electronMain, preload)
+		if bridgeErr != nil {
+			return nil, report, bridgeErr
 		}
-		htmlOut = strings.Replace(htmlOut, "</head>", "<style id=\"lunar-patcher-roblox-css\">"+robloxStyles+"</style></head>", 1)
+		changes["dist-electron/electron/main.js"] = newMain
+		changes["dist-electron/preload/launcher/index.js"] = newPreload
+		htmlOut = strings.Replace(htmlOut, "</head>", `<style id="lunar-patcher-roblox-css">`+robloxCSS+"</style></head>", 1)
 		changes[htmlName] = []byte(htmlOut)
-		report.Roblox = "Roblox sidebar and game launcher enabled"
+		report.Roblox = "Official Roblox.com website embedded within Lunar"
 	} else {
 		report.Roblox = "Disabled"
 	}
@@ -464,16 +467,8 @@ func Install(base, mode, color string, checkOnly bool, robloxOption ...bool) (Pa
 	if e := validatePair(originalExe, originalAsar); e != nil {
 		return report, e
 	}
-	// During installation only, resolve Roblox's official game icons and cache
-	// them inside the patched renderer. Compatibility-only checks stay offline.
-	artwork := map[string]string{}
-	if robloxEnabled && !checkOnly {
-		artwork = fetchRobloxArtwork(context.Background())
-	}
-	newAsar, report, e := patchSourceWithArtwork(originalAsar, mode, color, robloxEnabled, artwork)
-	if robloxEnabled {
-		report.Notes = append(report.Notes, fmt.Sprintf("Official Roblox thumbnails cached: %d/%d", len(artwork), len(robloxCatalogPlaces)))
-	}
+	// The embedded official Roblox website loads the real images itself.
+	newAsar, report, e := patchSourceWithArtwork(originalAsar, mode, color, robloxEnabled, nil)
 	if e != nil {
 		return report, e
 	}
