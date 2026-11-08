@@ -1,6 +1,6 @@
 # LunarPatcher
 
-An unofficial Windows customizer for Lunar Client. Version **1.6.1**.
+An unofficial Windows customizer for Lunar Client. Version **1.6.2**.
 
 LunarPatcher is a **patch-only application**. Select an appearance, optionally enable Roblox, click Apply, and then close LunarPatcher. Roblox browsing and game launching happen **inside Lunar Client**, not in the patcher.
 

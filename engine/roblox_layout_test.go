@@ -105,8 +105,13 @@ func TestRobloxBridgeSafety(t *testing.T) {
 	}
 }
 func TestRobloxWidgetPreservesMinifiedDeclarationChain(t *testing.T) {
-	if !strings.HasSuffix(robloxWidgetJS, "},\n") {
-		t.Fatal("Roblox React component must end in a comma before Lunar's existing declaration")
+	// Git for Windows may checkout text assets with CRLF. The injected component
+	// must terminate with a comma before Lunar's next minified declaration,
+	// regardless of whether the source ends in LF or CRLF.
+	for _, ending := range []string{robloxWidgetJS, strings.ReplaceAll(robloxWidgetJS, "\n", "\r\n")} {
+		if !strings.HasSuffix(strings.TrimRight(ending, "\r\n\t "), "},") {
+			t.Fatal("Roblox React component must end in a comma before Lunar's existing declaration")
+		}
 	}
 }
 
