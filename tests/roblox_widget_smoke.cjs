@@ -4,7 +4,7 @@ const fs=require('node:fs');
 const vm=require('node:vm');
 const code=fs.readFileSync('engine/assets/roblox_widget.js','utf8')
  .split('\n').slice(1).join('\n')
- .replaceAll('__JSX__','V').replaceAll('__REACT__','B').replaceAll('__INITIATOR__','tp.sidebar')
+ .replaceAll('__JSX__','V').replaceAll('__REACT__','B').replaceAll('__INITIATOR__','tp.sidebar').replaceAll('__ROBLOX_ART__',JSON.stringify({'2753915549':'data:image/png;base64,YQ=='}))
  .trim().replace(/,\s*$/,'');
 const opened=[],stored=new Map();const hooks=[];let hookIndex=0;
 const ctx={V:{jsx:(type,props)=>({type,props})},B:{useState:init=>{const i=hookIndex++;if(!(i in hooks))hooks[i]=typeof init==='function'?init():init;return[hooks[i],next=>{hooks[i]=typeof next==='function'?next(hooks[i]):next}]}},tp:{sidebar:'sidebar'},
@@ -27,6 +27,7 @@ function type(x,value){assert.ok(x,'Missing input');x.props.onChange({target:{va
 const tick=async()=>{await Promise.resolve();await Promise.resolve()};
 (async()=>{
  let tree=render();
+ assert.ok(all(tree,'img').some(n=>n.props?.src==='data:image/png;base64,YQ=='),'actual game art not wired into cards');
  for(const nav of ['Home','Discover','Library','Friends','Avatar','Marketplace','Accounts','Settings'])
   assert.ok(button(tree,nav),`Missing ${nav} navigation`);
  // Home -> details -> launch -> saved

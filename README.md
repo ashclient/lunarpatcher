@@ -15,7 +15,12 @@ The patch engine uses guarded renderer transforms and refuses unrecognized layou
 
 An off-by-default sidebar integration inside Lunar.
 
- Version 1.4.1 fixes **React error #137** (void inputs previously received `children` from the injected helper) and introduces a more complete, Roblox-style navigation screen rather than a form-only page.
+![Roblox Hub home (browser mock of injected renderer)](docs/roblox-hub-home.png)
+
+![Discover (browser mock of injected renderer)](docs/roblox-hub-discover.png)
+ Version 1.4.2 adds **real Roblox experience icons** from the official, unauthenticated thumbnail API. When you apply a patch with Roblox enabled, the engine fetches curated game icons by place ID, validates the returned image hosts and media types, and embeds the resulting images into Lunar’s ASAR. The UI also uses real icons on game cards, the featured experience and game details, with fallback artwork for unavailable thumbnails. Roblox requires internet access when the images are fetched; the patch still applies offline with fallbacks. No Roblox credentials or cookies are requested.
+
+Version 1.4.1 fixes **React error #137** (void inputs previously received `children` from the injected helper) and introduces a more complete, Roblox-style navigation screen rather than a form-only page.
 
 - **Home:** featured experience, continue playing, saved games and recommendations.
 - **Discover:** local curated experiences, categories, search, individual game detail screens, one-click official Player launching.
@@ -24,7 +29,7 @@ An off-by-default sidebar integration inside Lunar.
 - **Accounts:** locally stored username bookmarks, up to five. Real sign-in and switching take place on Roblox.com, never through collected credentials.
 - **Settings:** launch mode, website fallback, history, confirmation, and official installation/support links.
 
-Roblox website pages cannot simply be cloned into an iframe: framing and authentication restrictions apply. The in-Lunar native catalog is a small *curated* list, not a live copy of Roblox recommendations, and actual game thumbnails are best-effort. The UI never collects session cookies, passwords or credentials and does not modify Roblox executable files or FastFlags.
+Roblox website pages cannot simply be cloned into an iframe: framing and authentication restrictions apply. The in-Lunar native catalog is a small *curated* list, not a live copy of Roblox recommendations, and actual game thumbnails are best-effort, cached from Roblox’s official CDN when a patch is applied. The UI never collects session cookies, passwords or credentials and does not modify Roblox executable files or FastFlags.
 
 **Regression checks:** a test traverses rendered React element trees for void-element children (the exact cause of #137), then tests all eight hub pages, game launch links, saving, private invitations, account bookmarks and settings. A browser visual smoke test checks each page. Both known Lunar renderer fixtures undergo patch/parse validation. Live Windows launch inside Lunar remains unverified.
 

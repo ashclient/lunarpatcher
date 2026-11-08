@@ -2,6 +2,7 @@ package main
 
 import (
 	_ "embed"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -14,6 +15,10 @@ var robloxWidgetJS string
 // It does not replace or proxy Roblox authentication: the already installed
 // Windows Roblox protocol handler performs the actual game launch.
 func patchRobloxSidebar(source []byte) ([]byte, error) {
+	return patchRobloxSidebarWithArtwork(source, nil)
+}
+
+func patchRobloxSidebarWithArtwork(source []byte, art map[string]string) ([]byte, error) {
 	s := string(source)
 	var jsx, react, anchor, route, entry string
 	if strings.Contains(s, "(0,V.jsx)(y,{element:(0,V.jsx)(dW,{}),path:`/`})") {
@@ -61,6 +66,17 @@ func patchRobloxSidebar(source []byte) ([]byte, error) {
 	widget = strings.TrimPrefix(widget, "// Injected into Lunar's own renderer by LunarPatcher; no Roblox credentials or client binaries are touched.\n")
 	widget = strings.ReplaceAll(widget, "__JSX__", jsx)
 	widget = strings.ReplaceAll(widget, "__REACT__", react)
+	if art == nil {
+		art = map[string]string{}
+	}
+	artworkJSON, err := json.Marshal(art)
+	if err != nil {
+		return nil, err
+	}
+	if strings.Count(widget, "__ROBLOX_ART__") != 1 {
+		return nil, errors.New("Roblox artwork insertion marker changed")
+	}
+	widget = strings.Replace(widget, "__ROBLOX_ART__", string(artworkJSON), 1)
 	if jsx == "V" {
 		widget = strings.ReplaceAll(widget, "__INITIATOR__", "tp.sidebar")
 	} else {
@@ -106,7 +122,9 @@ const robloxCSS = `
 #root .lpr-chip-active{background:#f0f1f4;color:#111318;border-radius:999px;padding:8px 15px}
 #root .lpr-feature{position:relative;display:flex;align-items:center;min-height:230px;padding:30px 40px;border-radius:15px;overflow:hidden;border:1px solid rgba(255,255,255,.12)}
 #root .lpr-feature:after{content:"";position:absolute;right:-20px;top:-35px;width:240px;height:240px;border:36px solid rgba(255,255,255,.07);transform:rotate(-22deg);pointer-events:none}
-#root .lpr-feature-copy{position:relative;z-index:1;max-width:540px}
+#root .lpr-feature-image{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.62;filter:saturate(.95)}
+#root .lpr-feature:before{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(13,16,26,.96) 0%,rgba(13,16,26,.67) 52%,rgba(13,16,26,.16) 100%);z-index:1;pointer-events:none}
+#root .lpr-feature-copy{position:relative;z-index:2;max-width:540px}
 #root .lpr-feature-label{font-size:10px;letter-spacing:.13em;font-weight:700;color:rgba(255,255,255,.72)}
 #root .lpr-feature h2{font-size:35px;margin:11px 0 9px;letter-spacing:-.045em}
 #root .lpr-feature p{margin:0 0 22px;font-size:14px;color:rgba(255,255,255,.84)}
@@ -159,7 +177,8 @@ const robloxCSS = `
 #root .lpr-setting select{flex:0 0 210px}
 #root .lpr-detail-hero{min-height:215px;border-radius:14px;display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative}
 #root .lpr-detail-hero:after{content:"";position:absolute;border:45px solid rgba(255,255,255,.09);width:240px;height:240px;transform:rotate(25deg);right:5%;top:-90px}
-#root .lpr-detail-glyph{font-size:110px;font-weight:800;color:rgba(255,255,255,.8)}
+#root .lpr-detail-image{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.85}
+#root .lpr-detail-glyph{position:relative;z-index:1;text-shadow:0 2px 30px rgba(0,0,0,.6);font-size:110px;font-weight:800;color:rgba(255,255,255,.8)}
 #root .lpr-detail-info{display:flex;justify-content:space-between;gap:15px;flex-wrap:wrap;align-items:center}
 #root .lpr-detail-info h1{font-size:29px;margin:2px 0 7px}
 #root .lpr-detail-info p{margin:0 0 6px;color:#b0bcc9}
@@ -168,4 +187,4 @@ const robloxCSS = `
 @media(max-width:1150px){#root .lpr-game-grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
 @media(max-width:900px){#root .lpr-game-grid{grid-template-columns:repeat(3,minmax(0,1fr))}#root .lpr-topbar{gap:10px;padding:12px}#root .lpr-navigation{padding:7px 12px}}
 @media(max-width:660px){#root .lpr-game-grid{grid-template-columns:repeat(2,minmax(0,1fr))}#root .lpr-content,#root .lpr-detail{padding:20px 16px}#root .lpr-feature{min-height:190px;padding:22px}#root .lpr-feature h2{font-size:29px}#root .lpr-wordmark{min-width:auto}#root .lpr-wordmark strong{display:none}#root .lpr-heading{flex-wrap:wrap}#root .lpr-profile{flex-wrap:wrap}}
-`;
+`

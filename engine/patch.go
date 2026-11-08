@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	_ "embed"
 	"encoding/base64"
 	"encoding/json"
@@ -202,6 +203,10 @@ func parseVersion(a *asarArchive) string {
 
 func patchSource(asarBytes []byte, mode, color string, robloxOption ...bool) ([]byte, PatchReport, error) {
 	robloxEnabled := len(robloxOption) > 0 && robloxOption[0]
+	return patchSourceWithArtwork(asarBytes, mode, color, robloxEnabled, nil)
+}
+
+func patchSourceWithArtwork(asarBytes []byte, mode, color string, robloxEnabled bool, artwork map[string]string) ([]byte, PatchReport, error) {
 	report := PatchReport{Mode: mode, Color: color}
 	if mode != "color" {
 		report.Color = ""
@@ -275,7 +280,7 @@ func patchSource(asarBytes []byte, mode, color string, robloxOption ...bool) ([]
 		if !exists {
 			return nil, report, errors.New("Roblox sidebar cannot be inserted: renderer missing")
 		}
-		main, e = patchRobloxSidebar(main)
+		main, e = patchRobloxSidebarWithArtwork(main, artwork)
 		if e != nil {
 			return nil, report, e
 		}
@@ -459,7 +464,16 @@ func Install(base, mode, color string, checkOnly bool, robloxOption ...bool) (Pa
 	if e := validatePair(originalExe, originalAsar); e != nil {
 		return report, e
 	}
-	newAsar, report, e := patchSource(originalAsar, mode, color, robloxEnabled)
+	// During installation only, resolve Roblox's official game icons and cache
+	// them inside the patched renderer. Compatibility-only checks stay offline.
+	artwork := map[string]string{}
+	if robloxEnabled && !checkOnly {
+		artwork = fetchRobloxArtwork(context.Background())
+	}
+	newAsar, report, e := patchSourceWithArtwork(originalAsar, mode, color, robloxEnabled, artwork)
+	if robloxEnabled {
+		report.Notes = append(report.Notes, fmt.Sprintf("Official Roblox thumbnails cached: %d/%d", len(artwork), len(robloxCatalogPlaces)))
+	}
 	if e != nil {
 		return report, e
 	}

@@ -2,7 +2,7 @@ from pathlib import Path
 import re
 from playwright.sync_api import sync_playwright
 root=Path(__file__).resolve().parents[1]
-code=(root/'engine/assets/roblox_widget.js').read_text().split('\n',1)[1].replace('__JSX__','V').replace('__REACT__','B').replace('__INITIATOR__','tp.sidebar')
+code=(root/'engine/assets/roblox_widget.js').read_text().split('\n',1)[1].replace('__JSX__','V').replace('__REACT__','B').replace('__INITIATOR__','tp.sidebar').replace('__ROBLOX_ART__','{}')
 code=re.sub(r',\s*$', ';',code)
 css=(root/'engine/roblox_layout.go').read_text().split('const robloxCSS = `',1)[1].split('`\n',1)[0]
 bootstrap=r'''

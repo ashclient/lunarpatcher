@@ -10,6 +10,8 @@ lunarPatcherRobloxPage=()=>{
  const validUser=name=>/^[A-Za-z0-9_]{3,20}$/.test(name)&&!name.startsWith(`_`)&&!name.endsWith(`_`);
  const cleanGame=g=>g&&validId(g.id)&&typeof g.name===`string`?{id:String(g.id),name:g.name.slice(0,60)||`Experience ${g.id}`,genre:String(g.genre||`Experience`).slice(0,24)}:null;
  const cleanAccount=a=>a&&typeof a.username===`string`&&validUser(a.username)?{username:a.username,label:String(a.label||a.username).slice(0,36)}:null;
+ const ART=__ROBLOX_ART__; // Locally cached, official Roblox game icons (when available)
+ const imageFor=id=>ART[String(id)]||`https://www.roblox.com/asset-thumbnail/image?assetId=${encodeURIComponent(id)}&width=420&height=420&format=png`;
  const CATALOG=[
   {id:`4924922222`,name:`Brookhaven RP`,genre:`Roleplay`,subtitle:`Your own world, your own story`,art:`brookhaven`},
   {id:`2753915549`,name:`Blox Fruits`,genre:`Adventure`,subtitle:`Explore an ocean of adventure`,art:`blox`},
@@ -78,7 +80,7 @@ lunarPatcherRobloxPage=()=>{
  const tile=(g,compact=false)=>h(`article`,{className:`lpr-game ${compact?`lpr-game-small`:``}`,key:g.id},
    h(`button`,{type:`button`,className:`lpr-game-art lpr-art-${g.art||`custom`}`,onClick:()=>openGame(g),"aria-label":`View ${g.name}`},
      h(`span`,{className:`lpr-game-glyph`},(g.name||`R`).slice(0,1).toUpperCase()),
-     h(`img`,{loading:`lazy`,alt:``,src:`https://www.roblox.com/asset-thumbnail/image?assetId=${encodeURIComponent(g.id)}&width=420&height=420&format=png`,onError:e=>{e.currentTarget.style.display=`none`}})),
+     h(`img`,{loading:`lazy`,alt:`${g.name} game artwork`,src:imageFor(g.id),onError:e=>{e.currentTarget.style.display=`none`}})),
    h(`div`,{className:`lpr-game-meta`},h(`button`,{type:`button`,className:`lpr-game-name`,onClick:()=>openGame(g)},g.name),h(`small`,{},g.genre||`Experience`)),
    h(`button`,{type:`button`,className:`lpr-game-quick`,onClick:()=>launch({kind:`game`,id:g.id}),"aria-label":`Play ${g.name}`},`▶`));
  const rail=(title,items,action)=>h(`section`,{className:`lpr-rail`},h(`div`,{className:`lpr-rail-head`},h(`h2`,{},title),action||null),items.length?h(`div`,{className:`lpr-game-grid`},...items.map(g=>tile(g))):h(`div`,{className:`lpr-empty`},`Nothing here yet. Browse experiences to add some.`));
@@ -89,7 +91,7 @@ lunarPatcherRobloxPage=()=>{
   btn(`Play`,()=>launch(parseTarget(entry)),`primary`),btn(`Save`,saveFromInput));
  const home=h(`div`,{className:`lpr-content`},
    h(`div`,{className:`lpr-welcome`},h(`div`,{},h(`div`,{className:`lpr-eyebrow`},`LUNAR / ROBLOX`),h(`h1`,{},`Home`),h(`p`,{},`Your games, right where you left off.`)),btn(`Open Roblox`,()=>browse(`https://www.roblox.com/home`))),
-   h(`section`,{className:`lpr-feature lpr-art-blox`},h(`div`,{className:`lpr-feature-copy`},h(`span`,{className:`lpr-feature-label`},`FEATURED EXPERIENCE`),h(`h2`,{},primary.name),h(`p`,{},primary.subtitle),h(`div`,{className:`lpr-button-row`},btn(`▶  Play`,()=>launch({kind:`game`,id:primary.id}),`primary`),btn(`Game details`,()=>openGame(primary),`glass`)))),
+   h(`section`,{className:`lpr-feature lpr-art-blox`},h(`img`,{className:`lpr-feature-image`,src:imageFor(primary.id),alt:``,onError:e=>{e.currentTarget.style.display=`none`}}),h(`div`,{className:`lpr-feature-copy`},h(`span`,{className:`lpr-feature-label`},`FEATURED EXPERIENCE`),h(`h2`,{},primary.name),h(`p`,{},primary.subtitle),h(`div`,{className:`lpr-button-row`},btn(`▶  Play`,()=>launch({kind:`game`,id:primary.id}),`primary`),btn(`Game details`,()=>openGame(primary),`glass`)))),
    recent.length?rail(`Continue playing`,recent.slice(0,6),btn(`View history`,()=>navTo(`library`),`text`)):rail(`Recently popular`,CATALOG.slice(0,5),btn(`See all`,()=>navTo(`discover`),`text`)),
    favorites.length?rail(`Your saved experiences`,favorites.slice(0,6),btn(`Library`,()=>navTo(`library`),`text`)):null,
    settings.showPopular?rail(`Explore something new`,CATALOG.slice(3,8),btn(`Explore`,()=>navTo(`discover`),`text`)):null,
@@ -132,7 +134,7 @@ lunarPatcherRobloxPage=()=>{
  const activeGame=detail&&validId(detail.id)?detail:null;
  const details=activeGame?h(`div`,{className:`lpr-detail`},
   btn(`← Back`,()=>setDetail(null),`text`),
-  h(`div`,{className:`lpr-detail-hero lpr-art-${activeGame.art||`custom`}`},h(`span`,{className:`lpr-detail-glyph`},(activeGame.name||`R`)[0].toUpperCase())),
+  h(`div`,{className:`lpr-detail-hero lpr-art-${activeGame.art||`custom`}`},h(`img`,{className:`lpr-detail-image`,alt:`${activeGame.name} game artwork`,src:imageFor(activeGame.id),onError:e=>{e.currentTarget.style.display=`none`}}),h(`span`,{className:`lpr-detail-glyph`},(activeGame.name||`R`)[0].toUpperCase())),
   h(`div`,{className:`lpr-detail-info`},h(`div`,{},h(`div`,{className:`lpr-eyebrow`},`EXPERIENCE`),h(`h1`,{},activeGame.name),h(`p`,{},activeGame.subtitle||activeGame.genre||`Roblox experience`),h(`small`,{},`Place ID ${activeGame.id}`)),
    h(`div`,{className:`lpr-button-row`},btn(`▶ Play`,()=>launch({kind:`game`,id:activeGame.id}),`primary`),
     btn(catalogSaved(activeGame.id)?`Remove from library`:`Save to library`,()=>catalogSaved(activeGame.id)?persist(`favorites.v1`,favorites.filter(g=>g.id!==activeGame.id),setFavorites):saveGame(activeGame)),
