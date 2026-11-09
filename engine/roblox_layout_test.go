@@ -98,7 +98,7 @@ func TestRobloxBridgeSafety(t *testing.T) {
 	if strings.Contains(robloxMainBridge, "webSecurity:false") || strings.Contains(robloxMainBridge, "executeJavaScript(") {
 		t.Fatal("untrusted-site security regression")
 	}
-	for _, token := range []string{"useEffect", "bridge.show(b)", "bridge.hide()", "lpr-browser-address", "https://www.roblox.com/home"} {
+	for _, token := range []string{"useEffect", "run(`show`,bounds)", "bridge.hide()", "lpr-browser-address", "routeUrl(`/home`)"} {
 		if !strings.Contains(robloxWidgetJS, token) {
 			t.Fatalf("renderer missing %s", token)
 		}

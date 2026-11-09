@@ -66,7 +66,7 @@ jobs:
             Write-Host "Existing release $tag; skipping. Bump package.json version for a new release."
             exit 0
           }
-          $notes = "LunarPatcher ${version}: optional official Roblox.com browser embedded inside Lunar Client, with native website navigation and game handoff; desktop patcher only applies/restores patches. Existing themes, clean layout, and automatic updates preserved. The Roblox browser maintains an isolated signed-in session. Unsigned community build; SmartScreen may warn."
+          $notes = "LunarPatcher ${version}: rebuild the in-Lunar Roblox workspace with native navigation, official Roblox browsing, search, saved pages and secure Roblox Player handoff. Clean-room design based on public feature documentation; no proprietary Lunar for Roblox bundles or credential extraction. Existing Lunar themes and updater preserved."
           $assets = @(Get-ChildItem -Path dist -File | Where-Object { $_.Name -match '^LunarPatcher_Setup_.*\.exe(\.blockmap)?$' -or $_.Name -eq 'latest.yml' } | ForEach-Object { $_.FullName })
           if (-not ($assets | Where-Object { $_ -like '*.exe' })) { throw 'No setup executable found for release' }
           if (-not ($assets | Where-Object { $_ -like '*latest.yml' })) { throw 'Missing latest.yml for the updater' }
