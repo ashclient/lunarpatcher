@@ -84,20 +84,47 @@ func patchRobloxElectronBridge(main, preload []byte) ([]byte, []byte, error) {
 }
 
 const robloxCSS = `
-#root .lunar-patcher-roblox-browser{height:100%;min-height:0;min-width:0;display:flex;flex-direction:column;overflow:hidden;color:#f6f7fb;background:#15171e;font-family:inherit;box-sizing:border-box}
+#root .lunar-patcher-roblox-browser{height:100%;min-height:0;min-width:0;display:flex;overflow:hidden;color:#f5f6fb;background:#15171c;font-family:inherit;font-size:13px;box-sizing:border-box}
 #root .lunar-patcher-roblox-browser *{box-sizing:border-box}
-#root .lpr-browser-toolbar{flex:0 0 auto;min-height:52px;display:flex;align-items:center;gap:8px;padding:9px 14px;border-bottom:1px solid rgba(255,255,255,.1);background:#1b1d25}
-#root .lpr-browser-heading{font-weight:700;min-width:70px;font-size:14px;letter-spacing:-.01em}
-#root .lpr-browser-toolbar button{border:1px solid rgba(255,255,255,.1);background:#292c35;color:#fff;border-radius:7px;min-width:34px;height:32px;padding:0 9px;font-size:17px;cursor:pointer}
-#root .lpr-browser-toolbar button:hover:not(:disabled){background:#353944}
-#root .lpr-browser-toolbar button:disabled{opacity:.35;cursor:default}
-#root .lpr-browser-address{min-width:120px;flex:1;display:flex;align-items:center}
-#root .lpr-browser-address input{font:inherit;font-size:12px;color:#e5e8ed;min-width:0;flex:1;height:32px;padding:0 11px;border-radius:7px;border:1px solid rgba(255,255,255,.12);background:#14161c;outline:none}
-#root .lpr-browser-address input:focus{border-color:#aab3d1}
-#root .lpr-browser-viewport{flex:1;min-height:180px;width:100%;background:#111318;position:relative}
-#root .lpr-browser-footer{display:flex;gap:12px;align-items:center;justify-content:space-between;padding:6px 13px;min-height:35px;font-size:11px;color:#a6abb6;background:#1b1d25;border-top:1px solid rgba(255,255,255,.1)}
-#root .lpr-browser-footer button{font:inherit;background:transparent;color:inherit;cursor:pointer;border:0;padding:3px 6px}
-#root .lpr-browser-footer button:hover{color:#fff}
-#root .lunar-patcher-roblox-browser button:focus-visible{outline:2px solid #f6a2c5;outline-offset:2px}
-@media(max-width:760px){#root .lpr-browser-heading{min-width:0}#root .lpr-browser-toolbar{gap:4px;padding:5px}#root .lpr-browser-toolbar button{min-width:28px;padding:0 6px}}
+#root .lpr-navigation{width:186px;min-width:176px;background:#14161c;border-right:1px solid #2c3039;display:flex;flex-direction:column;min-height:0}
+#root .lpr-brand{height:66px;display:flex;align-items:center;gap:12px;padding:0 19px;font-size:17px;font-weight:750;letter-spacing:-.025em}
+#root .lpr-brand svg{color:#f8f9fb}
+#root .lpr-nav-scroll{flex:1;overflow-y:auto;min-height:0;padding:8px}
+#root .lpr-navigation-group{padding:4px 0 13px}
+#root .lpr-group-heading{font-size:10px!important;color:#737985!important;margin:10px 12px 8px!important;letter-spacing:.09em;font-weight:800!important}
+#root .lpr-nav-link{display:flex;align-items:center;gap:12px;width:100%;height:35px;padding:0 12px;border:0;text-align:left;background:transparent;color:#b1b6c2;border-radius:7px;cursor:pointer;font:inherit;font-size:12px;font-weight:570}
+#root .lpr-nav-link:hover{background:#252933;color:#f9f9fd}
+#root .lpr-nav-link.is-active{background:#333741;color:#fff}
+#root .lpr-nav-symbol{font-size:18px;line-height:1;width:17px;text-align:center;font-weight:500;color:#a1a5b1}
+#root .lpr-nav-link.is-active .lpr-nav-symbol{color:#fff}
+#root .lpr-saved-link .lpr-remove{margin-left:auto;color:#818794;font-size:17px;padding:2px 3px}
+#root .lpr-saved-link .lpr-remove:hover{color:#fff}
+#root .lpr-empty-saved{padding:0 12px;color:#8c919f;font-size:11px;line-height:1.45}
+#root .lpr-navigation-footer{padding:16px;border-top:1px solid #292d35;color:#777e8d;font-size:10px;line-height:1.5}
+#root .lpr-main{flex:1;min-width:0;display:flex;flex-direction:column;min-height:0;background:#181a20}
+#root .lpr-workspace-bar{display:flex;align-items:center;gap:12px;min-height:62px;padding:0 18px;border-bottom:1px solid #292d36;background:#1a1d24}
+#root .lpr-heading{display:flex;flex-direction:column;min-width:96px;gap:2px}
+#root .lpr-page-title{font-size:17px;font-weight:760;letter-spacing:-.025em;color:#f9fafc}
+#root .lpr-page-subtitle{font-size:10px;color:#9196a2}
+#root .lpr-search{display:flex;align-items:center;flex:1;min-width:120px;max-width:420px;height:34px;background:#101218;border:1px solid #333741;border-radius:8px;padding:0 8px;gap:8px}
+#root .lpr-search:focus-within{border-color:#7786a7}
+#root .lpr-search-icon{font-size:20px;color:#969ead}
+#root .lpr-search input{flex:1;min-width:0;background:transparent!important;border:0!important;outline:0!important;color:#fff;font:inherit;font-size:12px;padding:0}
+#root .lpr-search button{border:0;background:transparent;color:#c7cbda;cursor:pointer;font-size:11px}
+#root .lpr-search button:disabled{opacity:.45}
+#root .lpr-browser-toolbar{flex:0 0 auto;min-height:49px;display:flex;align-items:center;gap:7px;padding:7px 14px;border-bottom:1px solid #2b2e37;background:#1a1c23}
+#root .lpr-tool{background:#242731;border:1px solid #393d48;border-radius:7px;min-width:32px;height:32px;padding:0 8px;color:#eff1f7;cursor:pointer;font-size:15px}
+#root .lpr-tool:hover:not(:disabled){background:#343946}
+#root .lpr-tool:disabled{opacity:.35;cursor:default}
+#root .lpr-browser-address{display:flex;flex:1;min-width:120px}
+#root .lpr-browser-address input{min-width:0;flex:1;min-height:32px;background:#101218!important;border:1px solid #313640!important;border-radius:6px;padding:0 10px;color:#b7bdc9;font:inherit;font-size:11px;outline:none}
+#root .lpr-browser-address input:focus{border-color:#7885a3!important}
+#root .lpr-browser-viewport{flex:1;min-height:180px;width:100%;background:#101218;position:relative}
+#root .lpr-browser-footer{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:34px;padding:6px 15px;border-top:1px solid #292e38;background:#191c24;color:#8a93a2;font-size:10px}
+#root .lpr-browser-status{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#root .lpr-external{background:transparent;color:#aeb6c9;border:0;font:inherit;font-size:10px;cursor:pointer;flex-shrink:0}
+#root .lpr-external:hover{color:#fff}
+#root .lpr-workspace button:focus-visible{outline:2px solid #e6a3c1;outline-offset:2px}
+@media(max-width:850px){#root .lpr-navigation{width:142px;min-width:142px}#root .lpr-brand{padding:0 12px}#root .lpr-workspace-bar{padding:0 10px}#root .lpr-browser-toolbar{padding:6px}#root .lpr-search{max-width:300px}}
+@media(max-width:630px){#root .lpr-navigation{width:48px;min-width:48px}#root .lpr-nav-link{padding:0 14px}#root .lpr-nav-link span:nth-child(2),#root .lpr-group-heading,#root .lpr-brand span,#root .lpr-navigation-footer,#root .lpr-saved{display:none}#root .lpr-brand{padding:0 11px}#root .lpr-search{max-width:none}}
 `

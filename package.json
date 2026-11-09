@@ -1,7 +1,7 @@
 {
   "name": "lunarpatcher",
   "productName": "LunarPatcher",
-  "version": "1.6.2",
+  "version": "1.7.0",
   "description": "Patch-only desktop customizer; optional Roblox.com browser runs inside Lunar Client",
   "author": "ashclient",
   "license": "MIT",

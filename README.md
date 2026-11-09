@@ -1,6 +1,6 @@
 # LunarPatcher
 
-An unofficial Windows customizer for Lunar Client. Version **1.6.2**.
+An unofficial Windows customizer for Lunar Client. Version **1.7.0**.
 
 LunarPatcher is a **patch-only application**. Select an appearance, optionally enable Roblox, click Apply, and then close LunarPatcher. Roblox browsing and game launching happen **inside Lunar Client**, not in the patcher.
 
@@ -8,7 +8,7 @@ LunarPatcher is a **patch-only application**. Select an appearance, optionally e
 
 - Ads Only, Clean Layout, Sakura, and Custom Color modes
 - Full friends panel, Quick Play, and Updates page in the clean layout
-- Optional **Roblox** tab in Lunar's sidebar: an embedded browser showing **https://www.roblox.com/home**, its real images, pages, game links, friends, avatar editor, and account controls
+- Optional **Roblox** workspace in Lunar: an integrated navigation sidebar (Home, Discover, Friends, Messages, Avatar, Marketplace, Communities, Trades, and Settings), official Roblox website browsing, game search, and locally saved page shortcuts
 - Back, Forward, Reload, Home, URL, and Open in Browser controls in Lunar
 - Official Roblox Player protocol handoff for game launches, via Windows
 - Verified backups, restoration, version-aware safety checks, and GitHub Releases auto-updates for LunarPatcher
@@ -48,3 +48,11 @@ The GitHub Actions release job builds an Electron NSIS installer when a new comm
 ## Limitations
 
 This is unofficial and is not affiliated with Roblox or Lunar Client. The patcher depends on internal Electron/React implementation details and deliberately refuses unknown signatures. Only the available 3.7.31 and 3.7.32 renderer fixtures have been tested locally. Real Windows runtime behavior, Roblox sign-in, and game joining still require installation testing.
+
+## Lunar for Roblox reference
+
+The third-party repository [`chiikabu/lunar-for-roblox-decompiled`](https://github.com/chiikabu/lunar-for-roblox-decompiled) was used **only as a functional feature inventory**. Its README identifies the source as proprietary Moonsworth/Overwolf material. No decompiled application code, native binaries, proprietary icons, or assets are bundled or copied.
+
+This version is **not** a 1:1 recreation of Lunar for Roblox 1.0.16. It preserves the Minecraft Lunar Client launcher and adds an original Roblox workspace that works through official Roblox pages. The decompiled application is a standalone Electron product with its own IPC controllers, backend services, native components, and account/session infrastructure; directly transplanting those into Minecraft Lunar is not equivalent to adding a sidebar route.
+
+Unsupported here: native isolated Roblox client instances, separate authenticated account sessions, FastFlags/FPS modifications, macros, native avatar/marketplace checkout, capture/overlay services and custom game versions. No fake switches for these features are displayed. Roblox login occurs through the official Roblox website in an isolated browser session. The OS-installed Roblox Player is responsible for game joins.
