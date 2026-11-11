@@ -35,15 +35,17 @@ if(el){el.innerHTML='<div style="height:100%;display:flex;align-items:center;jus
 '''
 with sync_playwright() as p:
  browser=p.chromium.launch(headless=True,executable_path="/usr/bin/chromium",args=["--no-sandbox"])
- for width,height,out in [(1280,800,Path('/mnt/data/LunarPatcher_RobloxWorkspace_Preview.png')),(840,690,Path('/mnt/data/LunarPatcher_RobloxWorkspace_Narrow.png'))]:
+ for width,height,out in [(1280,800,Path('/mnt/data/LunarPatcher_Roblox_FullBleed_Preview.png')),(840,690,Path('/mnt/data/LunarPatcher_Roblox_FullBleed_Narrow.png'))]:
   page=browser.new_page(viewport={'width':width,'height':height},device_scale_factor=1)
   page.set_content('<!doctype html><html><head><style>html,body,#root{height:100%;margin:0;background:#111318;font-family:Arial,sans-serif}'+css+'</style></head><body><div id="root"></div></body></html>')
   page.evaluate('window.__SOURCE__='+json.dumps(source))
   page.evaluate(script)
-  assert page.locator('.lpr-navigation').count()==1
-  assert page.locator('.lpr-workspace .lpr-browser-address input').count()==1
-  assert page.locator('.lpr-navigation .lpr-nav-link').count()>=9
-  assert page.locator('.lpr-workspace .lpr-browser-viewport').count()==1
+  assert page.locator('.lpr-navigation').count()==0
+  assert page.locator('.lpr-browser-toolbar').count()==0
+  assert page.locator('.lpr-search').count()==0
+  assert page.locator('.lpr-browser-viewport').count()==1
+  bounds=page.locator('.lpr-browser-viewport').bounding_box()
+  assert bounds and bounds['width'] >= width-2 and bounds['height'] >= height-2
   page.screenshot(path=str(out),full_page=True)
   print(out.name, out.stat().st_size)
   page.close()

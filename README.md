@@ -1,6 +1,6 @@
 # LunarPatcher
 
-An unofficial Windows customizer for Lunar Client. Version **1.7.1**.
+An unofficial Windows customizer for Lunar Client. Version **1.7.2**.
 
 LunarPatcher is a **patch-only application**. Select an appearance, optionally enable Roblox, click Apply, and then close LunarPatcher. Roblox browsing and game launching happen **inside Lunar Client**, not in the patcher.
 
@@ -68,3 +68,11 @@ The ad-renderer guard and homepage JSX changed in 3.7.34-ow. This update detects
 - Preserves the optional Roblox route and its restricted Electron browser bridge.
 
 Ads Only disables the recognized ad renderer but otherwise keeps Lunar's original home layout. All four modes with Roblox on/off were tested against the user-provided 3.7.34 ASAR, including renderer syntax checks and fail-closed regression cases. Actual Windows UI startup was not verified; modifying the signed Lunar executable invalidates its code signature.
+
+## Roblox interface and Play handoff (v1.7.2)
+
+- The official Roblox site fills the Lunar content area with no second sidebar, address bar or search header.
+- An optional, narrowly scoped trusted-click hook activates on public Roblox game details pages only. Clicking the website's Play control sends `roblox://experiences/start?placeId=...` to the OS-installed player instead of the Electron webview's misleading installer dialog.
+- No credential, cookie, session-token or private server authentication data is read. The Player needs to be installed and signed in. Private-server joins may need the system browser.
+- When the OS cannot handle a Roblox URI, open the same game in the default browser so Roblox's normal browser-to-player integration can be used.
+- A remote site and game launch cannot be end-to-end tested from this build environment; verify Windows' registered Roblox protocol and an actual game join before considering it confirmed.

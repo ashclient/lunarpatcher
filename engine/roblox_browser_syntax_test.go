@@ -14,7 +14,7 @@ func TestPatchedLunarJSParses(t *testing.T) {
 	for _, tt := range []struct {
 		fixture     string
 		reconstruct bool
-	}{{"/mnt/data/app.asar", false}, {"/mnt/data/app(3).asar", true}} {
+	}{{"/mnt/data/app.asar", false}, {"/mnt/data/app(3).asar", true}, {"/mnt/data/app(4).asar", false}} {
 		t.Run(filepath.Base(tt.fixture), func(t *testing.T) {
 			raw, err := os.ReadFile(tt.fixture)
 			if os.IsNotExist(err) {

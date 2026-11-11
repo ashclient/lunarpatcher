@@ -12,7 +12,7 @@ func TestRobloxEmbeddedWebsitePatchingBothRenderers(t *testing.T) {
 	for _, fixture := range []struct {
 		path        string
 		reconstruct bool
-	}{{"/mnt/data/app.asar", false}, {"/mnt/data/app(3).asar", true}} {
+	}{{"/mnt/data/app.asar", false}, {"/mnt/data/app(3).asar", true}, {"/mnt/data/app(4).asar", false}} {
 		t.Run(filepath.Base(fixture.path), func(t *testing.T) {
 			raw, err := os.ReadFile(fixture.path)
 			if os.IsNotExist(err) {
@@ -95,12 +95,22 @@ func TestRobloxBridgeSafety(t *testing.T) {
 			t.Fatalf("browser missing safety check %s", token)
 		}
 	}
-	if strings.Contains(robloxMainBridge, "webSecurity:false") || strings.Contains(robloxMainBridge, "executeJavaScript(") {
+	if strings.Contains(robloxMainBridge, "webSecurity:false") || strings.Contains(robloxMainBridge, "nodeIntegration:true") {
 		t.Fatal("untrusted-site security regression")
 	}
-	for _, token := range []string{"useEffect", "run(`show`,bounds)", "bridge.hide()", "lpr-browser-address", "routeUrl(`/home`)"} {
+	for _, token := range []string{"useEffect", "bridge.show(bounds)", "bridge.hide()", "lpr-browser-viewport", "lpr-browser-error"} {
 		if !strings.Contains(robloxWidgetJS, token) {
 			t.Fatalf("renderer missing %s", token)
+		}
+	}
+	for _, forbidden := range []string{"lpr-navigation", "lpr-browser-toolbar", "lpr-workspace-bar", "lpr-search", "lpr-saved"} {
+		if strings.Contains(robloxWidgetJS, forbidden) || strings.Contains(robloxCSS, forbidden) {
+			t.Fatalf("unexpected duplicated Roblox chrome %s", forbidden)
+		}
+	}
+	for _, token := range []string{"executeJavaScript(playHookSource", "onGamePage", "event.isTrusted", "roblox://experiences/start?placeId="} {
+		if !strings.Contains(robloxMainBridge, token) {
+			t.Fatalf("direct Play hook missing %s", token)
 		}
 	}
 }

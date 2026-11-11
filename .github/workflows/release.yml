@@ -41,6 +41,8 @@ jobs:
           python -m playwright install chromium
       - name: Smoke-test Electron renderer states
         run: python tests/ui_smoke.py
+      - name: Smoke-test native Roblox game Play handoff
+        run: python tests/roblox_play_integration.py
       - name: Package Windows desktop application
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
@@ -66,7 +68,7 @@ jobs:
             Write-Host "Existing release $tag; skipping. Bump package.json version for a new release."
             exit 0
           }
-                    $notes = "LunarPatcher ${version}: restore ad removal and clean homepage layout for Lunar 3.7.34-ow, bring back full friends list, Quick Play and shortcuts, move news to Updates, preserve Sakura/Custom Color/Roblox. Version-aware patching remains fail-closed; Windows launcher appearance needs live validation."
+                    $notes = "LunarPatcher ${version}: streamline the in-Lunar Roblox website without duplicate navigation or toolbars, and route genuine Roblox game-page Play clicks to Windows Roblox Player. Preserve Lunar 3.7.34-ow ad removal, full friends, shortcuts, themes and rollback. Live Windows game joining remains to be verified."
           $assets = @(Get-ChildItem -Path dist -File | Where-Object { $_.Name -match '^LunarPatcher_Setup_.*\.exe(\.blockmap)?$' -or $_.Name -eq 'latest.yml' } | ForEach-Object { $_.FullName })
           if (-not ($assets | Where-Object { $_ -like '*.exe' })) { throw 'No setup executable found for release' }
           if (-not ($assets | Where-Object { $_ -like '*latest.yml' })) { throw 'Missing latest.yml for the updater' }

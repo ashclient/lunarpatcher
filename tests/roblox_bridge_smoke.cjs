@@ -22,6 +22,7 @@ class BrowserView {
   this.webContents.goBack=()=>{};
   this.webContents.goForward=()=>{};
   this.webContents.reload=()=>{};
+  this.webContents.executeJavaScript=async source=>{this.hook=source;return true};
   this.webContents.setWindowOpenHandler=handler=>{this.windowHandler=handler};
   views.push(this);
  }
@@ -43,7 +44,32 @@ vm.runInNewContext(fs.readFileSync(path.join(__dirname,'../engine/assets/roblox_
  assert.equal(permissions[0].key,'persist:lunarpatcher-roblox');
  let denied;permissions[0].cb(null,'camera',allow=>denied=allow);assert.equal(denied,false);
  assert.equal(views[0].url,'https://www.roblox.com/home');
+ views[0].webContents.emit('dom-ready');
+ await new Promise(resolve=>setImmediate(resolve));
+ assert(views[0].hook?.includes('onGamePage'),'Play hook must attach at Home for SPA navigation');
  await call('navigate','https://www.roblox.com/games/2753915549/test');
+ // Drive the exact hook with a trusted click, as if Roblox rendered its Play button.
+ const listeners={};
+ const pageButton={id:'game-detail-play-button',disabled:false,className:'play-button',textContent:'',getAttribute:()=>'',closest:()=>null,querySelector:()=>null};
+ const target={closest:()=>pageButton};
+ const site={window:{open:url=>views[0].windowHandler({url})},document:{addEventListener:(name,fn)=>listeners[name]=fn},location:{pathname:'/games/2753915549/test'}};
+ vm.runInNewContext(views[0].hook,site);
+ assert.equal(typeof listeners.click,'function');
+ const genuine={target,isTrusted:true,preventDefault(){this.prevented=true},stopImmediatePropagation(){this.stopped=true}};
+ listeners.click(genuine);
+ await new Promise(resolve=>setImmediate(resolve));
+ assert.equal(genuine.prevented,true,'native Play hook should prevent install modal');
+ assert(opened.some(x=>x==='roblox://experiences/start?placeId=2753915549'));
+ const baseline=opened.length;
+ listeners.click({...genuine,isTrusted:false});
+ assert.equal(opened.length,baseline,'synthetic click must not launch Roblox');
+ site.location.pathname='/home';listeners.click({...genuine,isTrusted:true});
+ assert.equal(opened.length,baseline,'non-game click must not launch Roblox');
+ site.location.pathname='/games/2753915549/test';
+ const download={...pageButton,id:'not-play',className:'install-button',textContent:'Download Roblox'};
+ listeners.click({target:{closest:()=>download},isTrusted:true,preventDefault(){throw Error('false play detection')}});
+ assert.equal(opened.length,baseline,'download buttons must not be intercepted');
+
  await assert.rejects(call('navigate','https://evil.example/phish'),/Only https:\/\/roblox\.com/);
  await assert.rejects(call('external','file:///C:/secret'),/External navigation restricted/);
  const event={preventDefault(){this.prevented=true}};

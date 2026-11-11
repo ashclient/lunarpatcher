@@ -1,5 +1,5 @@
 /* LunarPatcher Roblox browser: isolated official-site BrowserView inside Lunar's window.
- * No login handling, cookie access, remote script injection, or unsafe Electron webview flags.
+ * No login handling, cookie access, or unsafe Electron webview flags.
  * This code runs only in Lunar's main process after the user enables the optional tab.
  */
 ;(() => {
@@ -16,7 +16,47 @@
     } catch { return false; }
   };
   // Roblox's OS-installed player handles this link. Never run child processes here.
-  const isPlayerLink = value => typeof value === 'string' && value.length < 2048 && !/[\r\n\x00-\x1f]/.test(value) && /^(?:roblox|roblox-player):/i.test(value);
+  const isPlayerLink = value => {
+    if (typeof value !== 'string' || value.length > 2048 || /[\r\n\x00-\x1f]/.test(value)) return false;
+    if (/^roblox-player:1\+launchmode:(?:play|app)(?:\+|$)/i.test(value)) return true;
+    try {
+      const uri = new URL(value);
+      return uri.protocol === 'roblox:' && uri.hostname === 'experiences' && uri.pathname === '/start'
+        && /^[1-9][0-9]{0,19}$/.test(uri.searchParams.get('placeId') || '');
+    } catch { return false; }
+  };
+  // A normal Electron BrowserView is not recognized as an installed Roblox
+  // browser integration, even when Roblox Player is installed on Windows.
+  // Only intercept a deliberate Play click on an official /games/{placeId} page.
+  // The fixed, minimal hook does not inspect cookies, tokens, login forms or APIs.
+  const playHookSource = String.raw`(() => {
+    if (window.__lunarPatcherDirectPlay) return;
+    window.__lunarPatcherDirectPlay = true;
+    const onGamePage = () => /^\/games\/([1-9][0-9]{0,19})(?:\/|$)/.exec(location.pathname);
+    const isPlayControl = element => {
+      if (!element || typeof element.closest !== 'function') return false;
+      const button = element.closest('button,[role="button"],a,#game-detail-play-button,.game-play-button');
+      if (!button || button.disabled || button.closest('[role="dialog"],[aria-modal="true"]')) return false;
+      const id = (button.id || '').toLowerCase();
+      const testid = (button.getAttribute('data-testid') || '').toLowerCase();
+      const cls = (typeof button.className === 'string' ? button.className : '').toLowerCase();
+      const label = (button.getAttribute('aria-label') || button.getAttribute('title') || '').toLowerCase().trim();
+      const text = (button.textContent || '').toLowerCase().trim();
+      return id === 'game-detail-play-button' || /(?:^|[-_])(?:game[-_])?play(?:[-_]button)?(?:$|[-_])/.test(testid)
+        || /(?:^|\s)(?:game-detail-play-button|game-play-button|btn-play)(?:$|\s)/.test(cls)
+        || label === 'play' || text === 'play'
+        || !!button.querySelector('[class*="icon-play"],[data-testid="play-icon"],svg[aria-label="Play"]');
+    };
+    document.addEventListener('click', event => {
+      const match = onGamePage();
+      if (!match || !isPlayControl(event.target) || !event.isTrusted) return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      // Hand the selected public place to the OS-installed Roblox Player.
+      // No auth tickets, cookies, account data or backend calls are copied.
+      window.open('roblox://experiences/start?placeId=' + match[1], '_blank');
+    }, true);
+  })();`;
   const owner = event => {
     const sender = event.sender;
     const url = sender && sender.getURL();
@@ -60,6 +100,16 @@
       emit(win, {phase:'launch-requested',message:'Sent Roblox Player link to Windows. Check Roblox Player to confirm the game joined.'});
       return true;
     } catch (error) {
+      // Missing/broken OS protocol association: use the normal browser, which
+      // can invoke its own Roblox Player integration. Never auto-install anything.
+      if (value.startsWith('roblox://experiences/start?')) {
+        const placeId = new URL(value).searchParams.get('placeId');
+        try {
+          await shell.openExternal('https://www.roblox.com/games/' + placeId);
+          emit(win, {phase:'error',message:'Roblox protocol could not open; the game was opened in your browser instead.'});
+          return false;
+        } catch {}
+      }
       emit(win, {phase:'error',message:'Roblox Player could not be opened: '+String(error.message || error)});
       return false;
     }
@@ -96,6 +146,15 @@
     });
     web.on('did-navigate',()=>notifyNavigation(win,row));
     web.on('did-navigate-in-page',()=>notifyNavigation(win,row));
+    web.on('dom-ready',()=>{
+      // Install on official Roblox.com (including Home), so it survives
+      // single-page navigation to a game. Only genuine game Play clicks act.
+      const location = web.getURL();
+      if (!/^https:\/\/www\.roblox\.com(?:\/|$)/.test(location)) return;
+      void web.executeJavaScript(playHookSource, true).catch(error => emit(win, {
+        phase:'error', message:'Could not enable direct Roblox Play: '+String(error.message || error)
+      }));
+    });
     web.on('did-fail-load',(_event,errorCode,description,_url,isMainFrame)=>{
       if (isMainFrame !== false && errorCode !== -3) emit(win,{phase:'error',message:'Roblox page did not load: '+description});
     });

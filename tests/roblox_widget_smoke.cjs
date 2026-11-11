@@ -1,51 +1,20 @@
 'use strict';
-const assert=require('node:assert/strict');
-const fs=require('node:fs');
-const vm=require('node:vm');
-const path=require('node:path');
+const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),path=require('node:path');
 const src=fs.readFileSync(path.join(__dirname,'../engine/assets/roblox_widget.js'),'utf8');
-const calls=[],listeners=[],effects=[];
-const bridge={
- show:bounds=>{calls.push(['show',bounds]);return Promise.resolve(true)},
- bounds:bounds=>{calls.push(['bounds',bounds]);return Promise.resolve(true)},
- hide:()=>{calls.push(['hide']);return Promise.resolve(true)},
- navigate:url=>{calls.push(['navigate',url]);return Promise.resolve(true)},
- external:url=>{calls.push(['external',url]);return Promise.resolve(true)},
- reload:()=>{calls.push(['reload']);return Promise.resolve(true)},
- home:()=>{calls.push(['home']);return Promise.resolve(true)},
- back:()=>Promise.resolve(true),forward:()=>Promise.resolve(true),
- onState:fn=>{listeners.push(fn);return()=>calls.push(['unsubscribe'])}
-};
-const state=[],refs=[];let hook=0;const storage=new Map();
+const calls=[],effects=[],frames=[],listeners=[];
+const bridge={show:b=>{calls.push(['show',b]);return Promise.resolve(true)},bounds:b=>{calls.push(['bounds',b]);return Promise.resolve(true)},hide:()=>{calls.push(['hide']);return Promise.resolve(true)},external:u=>{calls.push(['external',u]);return Promise.resolve(true)},onState:f=>{listeners.push(f);return()=>calls.push(['unsubscribe'])}};
 const JSX={jsx:(type,props)=>({type,props:props||{}}),jsxs:(type,props)=>({type,props:props||{}})};
-const React={
- useState:initial=>{const index=hook++;if(!(index in state))state[index]=typeof initial==='function'?initial():initial;return [state[index],next=>{state[index]=next}]},
- useRef:value=>{const ref={current:value};refs.push(ref);return ref},
- useEffect:fn=>effects.push(fn)
-};
-const frames=[];
-const ctx={window:{lunarPatcherRobloxBrowser:bridge,localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v)},addEventListener(){},removeEventListener(){}},document:{addEventListener(){},removeEventListener(){}},ResizeObserver:class{observe(){} disconnect(){}},requestAnimationFrame:fn=>{frames.push(fn);return frames.length},cancelAnimationFrame:()=>{},URL,Promise,console,JSX,React};
-vm.runInNewContext('var '+src.replaceAll('__JSX__','JSX').replaceAll('__REACT__','React')+'dW=()=>{};\nthis.page=lunarPatcherRobloxPage;',ctx);
-const walk=(tree,list=[])=>{if(!tree||typeof tree!=='object')return list;list.push(tree);const c=tree.props?.children;if(Array.isArray(c))c.forEach(x=>walk(x,list));else walk(c,list);return list};
-const tree=ctx.page();
-const elements=walk(tree);
-for(const e of elements){if(e.type==='input'&&('children' in e.props))throw Error('React void input received children');}
-assert.equal(elements.filter(e=>e.type==='input').length,2);
-assert.equal(elements.filter(e=>e.type==='section').length,1);
-const viewport=elements.find(e=>e.props?.className==='lpr-browser-viewport');assert(viewport);
-viewport.props.ref.current={getBoundingClientRect:()=>({left:110,top:125,width:700,height:520})};
-const cleanup=effects[0]();assert.equal(typeof cleanup,'function');frames.shift()?.();
-(async()=>{
- await new Promise(resolve=>setImmediate(resolve));
- assert.equal(calls[0][0],'show');assert.equal(calls[0][1].width,700);
- const inputs=elements.filter(e=>e.type==='input'); assert.equal(inputs[1].props.value,'https://www.roblox.com/home');
- const buttons=elements.filter(e=>e.type==='button');
- buttons.find(e=>e.props.title==='Home').props.onClick();
- const friends=buttons.find(e=>e.props.className==='lpr-nav-link' && e.props.children?.[1]?.props?.children==='Friends');
- assert(friends,'Friends navigation should render');friends.props.onClick();
- buttons.find(e=>e.props.title==='Reload').props.onClick();
- await new Promise(resolve=>setImmediate(resolve));assert(calls.some(x=>x[0]==='navigate' && x[1].includes('/home')));assert(calls.some(x=>x[0]==='navigate'&&x[1].includes('/users/friends')));assert(calls.some(x=>x[0]==='reload'));
- cleanup();await new Promise(resolve=>setImmediate(resolve));
- assert.equal(calls.at(-1)[0],'hide');
- console.log('PASS: Roblox workspace navigation, search inputs, safe React void elements, browser lifecycle');
-})().catch(e=>{console.error(e);process.exitCode=1});
+const React={useState:initial=>[typeof initial==='function'?initial():initial,()=>{}],useRef:()=>({current:null}),useEffect:fn=>effects.push(fn)};
+const context={window:{lunarPatcherRobloxBrowser:bridge,addEventListener(){},removeEventListener(){}},document:{addEventListener(){},removeEventListener(){}},ResizeObserver:class{observe(){}disconnect(){}},requestAnimationFrame:fn=>{frames.push(fn);return frames.length},cancelAnimationFrame(){},JSX,React,Promise,console};
+vm.runInNewContext('var '+src.replaceAll('__JSX__','JSX').replaceAll('__REACT__','React')+'eq=()=>{};this.page=lunarPatcherRobloxPage;',context);
+const tree=context.page();
+const walk=(node,out=[])=>{if(!node||typeof node!=='object')return out;out.push(node);const kids=node.props?.children;(Array.isArray(kids)?kids:[kids]).forEach(k=>walk(k,out));return out};
+const nodes=walk(tree),viewport=nodes.find(x=>x.props?.className==='lpr-browser-viewport');
+assert(viewport,'missing BrowserView viewport');
+assert.equal(nodes.filter(x=>x.type==='aside').length,0,'extra Roblox sidebar');
+assert.equal(nodes.filter(x=>x.type==='header').length,0,'extra Roblox toolbar');
+assert.equal(nodes.filter(x=>x.type==='form').length,0,'extra Roblox search/address form');
+assert.equal(nodes.filter(x=>x.type==='input').length,0);
+viewport.props.ref.current={getBoundingClientRect:()=>({left:90,top:44,width:1100,height:730})};
+const cleanup=effects[0]();frames.shift()?.();
+(async()=>{await new Promise(r=>setImmediate(r));assert.equal(calls[0][0],'show');assert.equal(calls[0][1].width,1100);cleanup();await new Promise(r=>setImmediate(r));assert.equal(calls.at(-1)[0],'hide');console.log('PASS: full-bleed Roblox, no duplicate sidebar/toolbars, BrowserView lifecycle')})().catch(e=>{console.error(e);process.exitCode=1});
