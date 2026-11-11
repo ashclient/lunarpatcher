@@ -1,6 +1,6 @@
 # LunarPatcher
 
-An unofficial Windows customizer for Lunar Client. Version **1.7.0**.
+An unofficial Windows customizer for Lunar Client. Version **1.7.1**.
 
 LunarPatcher is a **patch-only application**. Select an appearance, optionally enable Roblox, click Apply, and then close LunarPatcher. Roblox browsing and game launching happen **inside Lunar Client**, not in the patcher.
 
@@ -47,7 +47,7 @@ The GitHub Actions release job builds an Electron NSIS installer when a new comm
 
 ## Limitations
 
-This is unofficial and is not affiliated with Roblox or Lunar Client. The patcher depends on internal Electron/React implementation details and deliberately refuses unknown signatures. Only the available 3.7.31 and 3.7.32 renderer fixtures have been tested locally. Real Windows runtime behavior, Roblox sign-in, and game joining still require installation testing.
+This is unofficial and is not affiliated with Roblox or Lunar Client. The patcher depends on internal Electron/React implementation details and deliberately refuses unknown signatures. The 3.7.31 and 3.7.32 renderer fixtures, plus a user-supplied stock 3.7.34-ow ASAR, have passed local patch tests. The 3.7.34 archive is not redistributed. Real Windows runtime behavior, Roblox sign-in, and game joining still require installation testing.
 
 ## Lunar for Roblox reference
 
@@ -56,3 +56,15 @@ The third-party repository [`chiikabu/lunar-for-roblox-decompiled`](https://gith
 This version is **not** a 1:1 recreation of Lunar for Roblox 1.0.16. It preserves the Minecraft Lunar Client launcher and adds an original Roblox workspace that works through official Roblox pages. The decompiled application is a standalone Electron product with its own IPC controllers, backend services, native components, and account/session infrastructure; directly transplanting those into Minecraft Lunar is not equivalent to adding a sidebar route.
 
 Unsupported here: native isolated Roblox client instances, separate authenticated account sessions, FastFlags/FPS modifications, macros, native avatar/marketplace checkout, capture/overlay services and custom game versions. No fake switches for these features are displayed. Roblox login occurs through the official Roblox website in an isolated browser session. The OS-installed Roblox Player is responsible for game joins.
+
+## Lunar 3.7.34-ow compatibility (v1.7.1)
+
+The ad-renderer guard and homepage JSX changed in 3.7.34-ow. This update detects the new guard and checks the new home layout explicitly before modifying it. In Clean Layout, Sakura, and Custom Color, it:
+
+- Disables the recognized ad slot renderer and removes ad-only containers from the Home panel.
+- Moves the real native Quick Play shelf under the Launch panel, followed by shortcut buttons.
+- Displays Lunar's existing friends component as a full-width list in the right column.
+- Moves the original news renderer into a dedicated Updates route and removes it beneath the Launch button.
+- Preserves the optional Roblox route and its restricted Electron browser bridge.
+
+Ads Only disables the recognized ad renderer but otherwise keeps Lunar's original home layout. All four modes with Roblox on/off were tested against the user-provided 3.7.34 ASAR, including renderer syntax checks and fail-closed regression cases. Actual Windows UI startup was not verified; modifying the signed Lunar executable invalidates its code signature.

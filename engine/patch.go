@@ -236,8 +236,16 @@ func patchSourceWithArtwork(asarBytes []byte, mode, color string, robloxEnabled 
 			continue
 		}
 		matches := guardPattern.FindAllIndex(b, -1)
+		// Lunar 3.7.34 simplified its ad guard from a conjunction to an
+		// early return on missing metadata/permission. Require ONE recognized
+		// guard in either format and do not touch unknown code.
+		var revised []byte
 		if len(matches) == 1 {
-			revised := guardPattern.ReplaceAll(b, []byte("if(true)return null;/* Lunar Adaptive: no ad slot */"))
+			revised = guardPattern.ReplaceAll(b, []byte("if(true)return null;/* Lunar Adaptive: no ad slot */"))
+		} else if len(matches) == 0 && bytes.Count(b, []byte("if(!a||!e.willShowAd)return null;")) == 1 {
+			revised = bytes.Replace(b, []byte("if(!a||!e.willShowAd)return null;"), []byte("if(true)return null;/* Lunar Adaptive: no ad slot */"), 1)
+		}
+		if revised != nil {
 			changes[name] = revised
 			slotPatched = true
 			report.Ads = "Ad renderer disabled"
