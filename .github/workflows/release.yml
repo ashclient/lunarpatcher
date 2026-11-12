@@ -68,7 +68,7 @@ jobs:
             Write-Host "Existing release $tag; skipping. Bump package.json version for a new release."
             exit 0
           }
-                    $notes = "LunarPatcher ${version}: streamline the in-Lunar Roblox website without duplicate navigation or toolbars, and route genuine Roblox game-page Play clicks to Windows Roblox Player. Preserve Lunar 3.7.34-ow ad removal, full friends, shortcuts, themes and rollback. Live Windows game joining remains to be verified."
+          $notes = "LunarPatcher ${version}: compatibility update for Lunar 3.7.36-ow. Restore Clean Layout, Sakura, Custom Color, real friends list, Quick Play, shortcuts and Updates; disable recognized home ads; preserve Roblox tab and verified backup/restore. Live Windows launcher appearance and Roblox game joining remain unverified."
           $assets = @(Get-ChildItem -Path dist -File | Where-Object { $_.Name -match '^LunarPatcher_Setup_.*\.exe(\.blockmap)?$' -or $_.Name -eq 'latest.yml' } | ForEach-Object { $_.FullName })
           if (-not ($assets | Where-Object { $_ -like '*.exe' })) { throw 'No setup executable found for release' }
           if (-not ($assets | Where-Object { $_ -like '*latest.yml' })) { throw 'Missing latest.yml for the updater' }

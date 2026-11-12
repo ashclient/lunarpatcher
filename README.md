@@ -1,6 +1,6 @@
 # LunarPatcher
 
-An unofficial Windows customizer for Lunar Client. Version **1.7.2**.
+An unofficial Windows customizer for Lunar Client. Version **1.7.3**.
 
 LunarPatcher is a **patch-only application**. Select an appearance, optionally enable Roblox, click Apply, and then close LunarPatcher. Roblox browsing and game launching happen **inside Lunar Client**, not in the patcher.
 
@@ -47,7 +47,7 @@ The GitHub Actions release job builds an Electron NSIS installer when a new comm
 
 ## Limitations
 
-This is unofficial and is not affiliated with Roblox or Lunar Client. The patcher depends on internal Electron/React implementation details and deliberately refuses unknown signatures. The 3.7.31 and 3.7.32 renderer fixtures, plus a user-supplied stock 3.7.34-ow ASAR, have passed local patch tests. The 3.7.34 archive is not redistributed. Real Windows runtime behavior, Roblox sign-in, and game joining still require installation testing.
+This is unofficial and is not affiliated with Roblox or Lunar Client. The patcher depends on internal Electron/React implementation details and deliberately refuses unknown signatures. The available 3.7.31 and 3.7.32 fixtures and user-supplied stock 3.7.34-ow and 3.7.36-ow ASAR files passed local patch tests. User-supplied launcher archives are not redistributed. Real Windows runtime behavior, Roblox sign-in, and game joining still require installation testing.
 
 ## Lunar for Roblox reference
 
@@ -76,3 +76,11 @@ Ads Only disables the recognized ad renderer but otherwise keeps Lunar's origina
 - No credential, cookie, session-token or private server authentication data is read. The Player needs to be installed and signed in. Private-server joins may need the system browser.
 - When the OS cannot handle a Roblox URI, open the same game in the default browser so Roblox's normal browser-to-player integration can be used.
 - A remote site and game launch cannot be end-to-end tested from this build environment; verify Windows' registered Roblox protocol and an actual game join before considering it confirmed.
+
+## Lunar 3.7.36-ow compatibility (v1.7.3)
+
+- Recognizes the newly renamed 3.7.36 home route (`tq`) and its native launch panel, news, friends, Quick Play and home advertising slots.
+- Clean Layout, Sakura and Custom Color move news to Updates, preserve Lunar's launch controls, render the actual Quick Play component and shortcuts below Launch, expand the real friends list, and remove the ad-only homepage containers. Ads Only retains Lunar's original homepage structure while disabling the recognized ad slot renderer.
+- The optional in-Lunar Roblox route is updated for the new sidebar and route names. The patcher's desktop window remains patch-only.
+- All four modes, with and without Roblox, were tested against the supplied 3.7.36 archive, including patched JavaScript syntax checks and negative signature-change tests; a synthetic fixture exercises the adapter in CI. **Runtime appearance and Roblox game launching on Windows are not verified.**
+- Reapply from a known-clean verified backup after updating LunarPatcher; if the backup cannot be verified, use the official Lunar installer to restore a clean launcher before applying. Do not directly replace the original ASAR with one from another version.

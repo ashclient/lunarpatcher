@@ -14,6 +14,9 @@ import (
 // without installing a partially styled or empty home page.
 func patchHomeLayout(source []byte) ([]byte, error) {
 	src := string(source)
+	if strings.Contains(src, "(0,V.jsx)(A,{element:(0,V.jsx)(tq,{}),path:`/`})") {
+		return patchHome336(src)
+	}
 	if strings.Contains(src, "(0,V.jsx)(j,{element:(0,V.jsx)(eq,{}),path:`/`})") {
 		return patchHome334(src)
 	}
