@@ -1,6 +1,6 @@
 # LunarPatcher
 
-An unofficial Windows customizer for Lunar Client. Version **1.7.4**.
+An unofficial Windows customizer for Lunar Client. Version **1.7.5**.
 
 LunarPatcher is a **patch-only application**. Select an appearance, optionally enable Roblox, click Apply, and then close LunarPatcher. Roblox browsing and game launching happen **inside Lunar Client**, not in the patcher.
 
@@ -47,7 +47,7 @@ The GitHub Actions release job builds an Electron NSIS installer when a new comm
 
 ## Limitations
 
-This is unofficial and is not affiliated with Roblox or Lunar Client. The patcher depends on internal Electron/React implementation details and deliberately refuses unknown signatures. The available 3.7.31 and 3.7.32 fixtures and user-supplied stock 3.7.34-ow, 3.7.36-ow, and 3.7.37-ow ASAR files passed local patch tests. User-supplied launcher archives are not redistributed. Real Windows runtime behavior, Roblox sign-in, and game joining still require installation testing.
+This is unofficial and is not affiliated with Roblox or Lunar Client. The patcher depends on internal Electron/React implementation details and deliberately refuses unknown signatures. The available 3.7.31 and 3.7.32 fixtures and user-supplied stock 3.7.34-ow, 3.7.36-ow, 3.7.37-ow, and 3.7.38-ow ASAR files passed local patch tests. User-supplied launcher archives are not redistributed. Real Windows runtime behavior, Roblox sign-in, and game joining still require installation testing.
 
 ## Lunar for Roblox reference
 
@@ -93,3 +93,13 @@ Ads Only disables the recognized ad renderer but otherwise keeps Lunar's origina
 - Updates the Roblox sidebar route injection for the renamed 3.7.37 renderer, leaving the existing secure BrowserView bridge intact.
 - ASAR-level tests passed all eight combinations (four modes × Roblox off/on) against the user-uploaded `app(6).asar` (3.7.37-ow). The changed JavaScript bundles pass `node --check`, and synthetic and deliberately damaged signatures fail closed. Uploaded proprietary ASAR fixtures are not committed to this repository.
 - Actual Windows launcher startup, visual appearance, and Roblox game joining remain unverified until the installed launcher is tested on a Windows machine. Preserve version-matched verified backups; do not transplant an ASAR from a different Lunar build.
+
+## Lunar 3.7.38-ow compatibility (v1.7.5)
+
+- Supports the user-provided `app(7).asar` (Lunar 3.7.38-ow); this proprietary archive is not redistributed.
+- Recognizes the renamed `mq` homepage, `gK` launch hero, `MK` news feed, `iq` Quick Play component, `sK` friends list, and the changed advertising column.
+- For Clean Layout, Sakura and Custom Color, removes the homepage advertising containers, displays Lunar's actual friends component in list mode, places Quick Play and shortcuts beneath the original Launch panel, and moves native announcements to the Updates tab.
+- For Ads Only, preserves the original homepage structure and disables only the recognized ad slot renderer.
+- Updates the optional Roblox sidebar route for the renamed React router and retains the existing isolated browser bridge.
+- Eight patch combinations (four modes × Roblox off/on), source-level negative signature tests, Go tests, Electron/Roblox/updater smoke tests, and generated JavaScript syntax checks pass locally. Actual Windows startup, visuals, Roblox website login and joining games still need verification.
+- Verified version-matched backup and restore behavior is unchanged; do not transplant `app.asar` archives from other Lunar builds.
