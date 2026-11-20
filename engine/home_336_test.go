@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -88,7 +89,7 @@ func TestUploaded3_7_36(t *testing.T) {
 					for _, file := range []string{"dist/assets/main.js", "dist/assets/use-show-ad.js", "dist-electron/electron/main.js", "dist-electron/preload/launcher/index.js"} {
 						b, _ := p.entry(file)
 						name := strings.ReplaceAll(file, "/", "_")
-						if err := os.WriteFile("/mnt/data/lunarpatcher_v173/"+name+"_patched.js", b, 0600); err != nil {
+						if err := os.WriteFile(filepath.Join(t.TempDir(), name+"_patched.js"), b, 0600); err != nil {
 							t.Fatal(err)
 						}
 					}

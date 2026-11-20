@@ -28,7 +28,13 @@ func patchRobloxSidebarWithArtwork(source []byte, _ map[string]string) ([]byte, 
 	s := string(source)
 	var jsx, react, componentAnchor, routeAnchor, routeAdd, internal, external string
 	entry := "{type:`route`,id:`roblox`,inactiveIcon:lunarPatcherRobloxIcon,activeIcon:lunarPatcherRobloxIcon,tooltip:`Roblox`,path:`/roblox`}"
-	if strings.Contains(s, "(0,H.jsx)(O,{element:(0,H.jsx)(mq,{}),path:`/`})") {
+	if strings.Contains(s, "(0,Z.jsx)(D,{element:(0,Z.jsx)(Fm,{}),path:`/`})") {
+		jsx, react, componentAnchor = "Z", "Q", "Fm=()=>{"
+		routeAnchor = "(0,Z.jsx)(D,{element:(0,Z.jsx)(Fm,{}),path:`/`})"
+		routeAdd = "(0,Z.jsx)(D,{element:(0,Z.jsx)(lunarPatcherRobloxPage,{}),path:`/roblox`})"
+		internal = "{type:`route`,id:`news`,inactiveIcon:yt,activeIcon:yt,tooltip:`Updates`,path:`/updates`}"
+		external = "{type:`external`,id:`news`,icon:yt,tooltip:e(`layout.sidebar.news.tooltip`),url:`https://www.lunarclient.com/news`}"
+	} else if strings.Contains(s, "(0,H.jsx)(O,{element:(0,H.jsx)(mq,{}),path:`/`})") {
 		jsx, react, componentAnchor = "H", "V", "mq=()=>{"
 		routeAnchor = "(0,H.jsx)(O,{element:(0,H.jsx)(mq,{}),path:`/`})"
 		routeAdd = "(0,H.jsx)(O,{element:(0,H.jsx)(lunarPatcherRobloxPage,{}),path:`/roblox`})"

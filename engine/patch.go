@@ -228,7 +228,7 @@ func patchSourceWithArtwork(asarBytes []byte, mode, color string, robloxEnabled 
 	}
 	changes := map[string][]byte{}
 	// The slot-renderer guard may be minified differently across versions. Patch only if unique.
-	adFiles := []string{"dist/assets/use-show-ad.js"}
+	adFiles := []string{"dist/assets/use-show-ad.js", "dist/assets/use-page-search-keybind.js"}
 	slotPatched := false
 	for _, name := range adFiles {
 		b, exists := a.entry(name)

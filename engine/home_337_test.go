@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -119,11 +120,11 @@ func TestUploaded3_7_37(t *testing.T) {
 				}
 				if mode == "sakura" && roblox {
 					// Checked by node --check outside Go. Files are not bundled with the app.
-					os.MkdirAll("/mnt/data/lunarpatcher_v174/validation", 0700)
+					os.MkdirAll(t.TempDir(), 0700)
 					for _, file := range []string{"dist/assets/main.js", "dist/assets/use-show-ad.js", "dist-electron/electron/main.js", "dist-electron/preload/launcher/index.js"} {
 						b, _ := u.entry(file)
 						out := strings.ReplaceAll(file, "/", "_")
-						if err := os.WriteFile("/mnt/data/lunarpatcher_v174/validation/"+out+".mjs", b, 0600); err != nil {
+						if err := os.WriteFile(filepath.Join(t.TempDir(), out+".mjs"), b, 0600); err != nil {
 							t.Fatal(err)
 						}
 					}
